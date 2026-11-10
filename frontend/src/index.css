@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+:root {
+  --bg-ink: #111318;
+  --cobalt: #427BFF;
+  --lime: #D9FF47;
+  --coral: #FF725E;
+  --violet: #7048D9;
+  --cyan: #35D5E8;
+  --white: #F7F8FA;
+  --muted: #9BA6B8;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-ink);
+  color: var(--white);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Vibrant Neo-Brutalist utility classes */
+.neo-box {
+  background-color: #171A21;
+  border: 2px solid #2B313E;
+  box-shadow: 4px 4px 0px 0px #090A0D;
+}
+
+.neo-box-cobalt {
+  border: 2px solid #427BFF;
+  box-shadow: 4px 4px 0px 0px #427BFF;
+}
+
+.neo-box-lime {
+  border: 2px solid #D9FF47;
+  box-shadow: 4px 4px 0px 0px #D9FF47;
+}
+
+.neo-btn {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 1rem;
+  border: 2px solid #000;
+  box-shadow: 3px 3px 0px 0px #000;
+  transition: all 0.1s ease;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.neo-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px 0px #000;
+}

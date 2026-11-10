@@ -1,0 +1,14 @@
+name = "django-csrf-middleware-bypass"
+category = "Security & Web"
+difficulty = "HARD"
+timeout = 240
+environment = "python:3.11-slim"
+
+[verifier]
+type = "pytest"
+script = "pytest tests/test_csrf.py"
+reward_metric = "exit_code_zero"
+
+[tags]
+tags = ["security", "csrf", "middleware", "python"]
+

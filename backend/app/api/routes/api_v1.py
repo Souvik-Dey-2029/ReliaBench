@@ -1,0 +1,283 @@
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from sqlalchemy.orm import Session
+from typing import List, Optional
+import os
+import json
+from pathlib import Path
+
+from app.db.session import get_db
+from app.models.entities import Agent, BenchmarkTask, FailureScenario, Experiment, Run, Trial, Trajectory
+from app.schemas.api import (
+    AgentResponse, AgentCreate, AgentUpdate,
+    BenchmarkTaskResponse, BenchmarkTaskCreate,
+    FailureScenarioResponse,
+    ExperimentResponse, ExperimentCreate,
+    DashboardSummary, RunResponse
+)
+from app.adapters.harbor.adapter import HarborAdapter
+from app.adapters.gateways.bifrost import BifrostAdapter
+from app.services.execution import ExecutionService
+from app.core.config import settings
+
+router = APIRouter()
+
+# ----------------- SYSTEM & DIAGNOSTICS -----------------
+@router.get("/health")
+def health_check():
+    harbor_ad = HarborAdapter(settings.HARBOR_BIN_PATH, settings.HARBOR_VERSION_REQUIRED)
+    bifrost_ad = BifrostAdapter()
+    return {
+        "status": "healthy",
+        "version": "0.1.0",
+        "database": "connected",
+        "adapters": {
+            "harbor": harbor_ad.check_availability(),
+            "bifrost": bifrost_ad.get_status()
+        }
+    }
+
+@router.get("/dashboard/summary", response_model=DashboardSummary)
+def get_dashboard_summary(db: Session = Depends(get_db)):
+    agents_count = db.query(Agent).count()
+    benchmarks_count = db.query(BenchmarkTask).count()
+    experiments_count = db.query(Experiment).count()
+
+    runs = db.query(Run).all()
+    overall_pass = 0.0
+    avg_duration = 0.0
+    avg_cost = 0.0
+
+    if runs:
+        valid_runs = [r for r in runs if r.total_trials > 0]
+        if valid_runs:
+            overall_pass = sum(r.pass_rate for r in valid_runs) / len(valid_runs)
+            avg_duration = sum(r.avg_duration_seconds for r in valid_runs) / len(valid_runs)
+            costs = [r.avg_cost_usd for r in valid_runs if r.avg_cost_usd is not None]
+            avg_cost = (sum(costs) / len(costs)) if costs else 0.003
+
+    recent_exps = db.query(Experiment).order_by(Experiment.created_at.desc()).limit(5).all()
+
+    # Recent failure trials
+    failed_trials = db.query(Trial).filter(Trial.status == "FAILED").order_by(Trial.created_at.desc()).limit(5).all()
+    recent_failures = []
+    for ft in failed_trials:
+        run = ft.run
+        exp = run.experiment if run else None
+        recent_failures.append({
+            "trial_id": ft.id,
+            "experiment_title": exp.title if exp else "Unknown",
+            "agent_name": exp.agent.name if exp and exp.agent else "Unknown",
+            "error_message": ft.error_message or "Verifier failed",
+            "created_at": ft.created_at.isoformat()
+        })
+
+    # Reliability distribution across categories
+    categories = db.query(BenchmarkTask.category).distinct().all()
+    rel_dist = []
+    for (cat,) in categories:
+        cat_tasks = db.query(BenchmarkTask.id).filter(BenchmarkTask.category == cat).all()
+        cat_task_ids = [t[0] for t in cat_tasks]
+        cat_runs = db.query(Run).join(Experiment).filter(Experiment.benchmark_task_id.in_(cat_task_ids)).all()
+        if cat_runs:
+            pass_rt = sum(r.pass_rate for r in cat_runs) / len(cat_runs)
+            rec_runs = [r.recovery_rate for r in cat_runs if r.recovery_rate is not None]
+            rec_rt = (sum(rec_runs) / len(rec_runs)) if rec_runs else 0.0
+        else:
+            pass_rt = 0.0
+            rec_rt = 0.0
+        rel_dist.append({
+            "category": cat,
+            "pass_rate": round(pass_rt, 3),
+            "recovery_rate": round(rec_rt, 3)
+        })
+
+    harbor_status = HarborAdapter(settings.HARBOR_BIN_PATH, settings.HARBOR_VERSION_REQUIRED).check_availability()
+    active_mode = "HARBOR_NATIVE" if harbor_status.get("available") and harbor_status.get("docker_available") else "SIMULATOR_DEMO"
+
+    return DashboardSummary(
+        total_agents=agents_count,
+        total_benchmarks=benchmarks_count,
+        total_experiments=experiments_count,
+        overall_pass_rate=round(overall_pass, 3),
+        average_duration_seconds=round(avg_duration, 1),
+        average_cost_usd=round(avg_cost, 4) if avg_cost else None,
+        active_environment_mode=active_mode,
+        harbor_status=harbor_status,
+        recent_experiments=recent_exps,
+        recent_failures=recent_failures,
+        reliability_distribution=rel_dist
+    )
+
+# ----------------- AGENT REGISTRY -----------------
+@router.get("/agents", response_model=List[AgentResponse])
+def list_agents(db: Session = Depends(get_db)):
+    return db.query(Agent).order_by(Agent.created_at.desc()).all()
+
+@router.post("/agents", response_model=AgentResponse, status_code=201)
+def create_agent(agent_in: AgentCreate, db: Session = Depends(get_db)):
+    agent = Agent(**agent_in.model_dump())
+    db.add(agent)
+    db.commit()
+    db.refresh(agent)
+    return agent
+
+@router.get("/agents/{agent_id}", response_model=AgentResponse)
+def get_agent(agent_id: str, db: Session = Depends(get_db)):
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    return agent
+
+@router.put("/agents/{agent_id}", response_model=AgentResponse)
+def update_agent(agent_id: str, agent_in: AgentUpdate, db: Session = Depends(get_db)):
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    for field, val in agent_in.model_dump(exclude_unset=True).items():
+        setattr(agent, field, val)
+    db.commit()
+    db.refresh(agent)
+    return agent
+
+@router.delete("/agents/{agent_id}")
+def delete_agent(agent_id: str, db: Session = Depends(get_db)):
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    db.delete(agent)
+    db.commit()
+    return {"message": "Agent deleted successfully"}
+
+# ----------------- BENCHMARK TASK LIBRARY -----------------
+@router.get("/benchmarks", response_model=List[BenchmarkTaskResponse])
+def list_benchmarks(db: Session = Depends(get_db)):
+    return db.query(BenchmarkTask).order_by(BenchmarkTask.created_at.desc()).all()
+
+@router.post("/benchmarks", response_model=BenchmarkTaskResponse, status_code=201)
+def create_benchmark(task_in: BenchmarkTaskCreate, db: Session = Depends(get_db)):
+    task = BenchmarkTask(**task_in.model_dump())
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return task
+
+@router.get("/benchmarks/{benchmark_id}", response_model=BenchmarkTaskResponse)
+def get_benchmark(benchmark_id: str, db: Session = Depends(get_db)):
+    task = db.query(BenchmarkTask).filter(BenchmarkTask.id == benchmark_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Benchmark task not found")
+    return task
+
+# ----------------- FAILURE SCENARIOS -----------------
+@router.get("/failures", response_model=List[FailureScenarioResponse])
+def list_failures(db: Session = Depends(get_db)):
+    return db.query(FailureScenario).all()
+
+# ----------------- EXPERIMENTS -----------------
+@router.get("/experiments", response_model=List[ExperimentResponse])
+def list_experiments(db: Session = Depends(get_db)):
+    return db.query(Experiment).order_by(Experiment.created_at.desc()).all()
+
+@router.post("/experiments", response_model=ExperimentResponse, status_code=201)
+def create_experiment(exp_in: ExperimentCreate, db: Session = Depends(get_db)):
+    agent = db.query(Agent).filter(Agent.id == exp_in.agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=400, detail="Invalid agent_id")
+    task = db.query(BenchmarkTask).filter(BenchmarkTask.id == exp_in.benchmark_task_id).first()
+    if not task:
+        raise HTTPException(status_code=400, detail="Invalid benchmark_task_id")
+
+    exp = Experiment(**exp_in.model_dump(), status="QUEUED")
+    db.add(exp)
+    db.commit()
+    db.refresh(exp)
+    return exp
+
+@router.get("/experiments/{experiment_id}", response_model=ExperimentResponse)
+def get_experiment(experiment_id: str, db: Session = Depends(get_db)):
+    exp = db.query(Experiment).filter(Experiment.id == experiment_id).first()
+    if not exp:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+    return exp
+
+@router.post("/experiments/{experiment_id}/start")
+async def start_experiment(experiment_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    exp = db.query(Experiment).filter(Experiment.id == experiment_id).first()
+    if not exp:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+
+    executor = ExecutionService(db)
+    background_tasks.add_task(executor.execute_experiment_async, experiment_id)
+    return {"message": "Experiment execution started", "experiment_id": experiment_id, "status": "RUNNING"}
+
+@router.post("/experiments/{experiment_id}/cancel")
+def cancel_experiment(experiment_id: str, db: Session = Depends(get_db)):
+    exp = db.query(Experiment).filter(Experiment.id == experiment_id).first()
+    if not exp:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+    exp.status = "CANCELLED"
+    db.commit()
+    return {"message": "Experiment marked CANCELLED", "experiment_id": experiment_id}
+
+# ----------------- RUNS & TRAJECTORIES -----------------
+@router.get("/runs/{run_id}", response_model=RunResponse)
+def get_run(run_id: str, db: Session = Depends(get_db)):
+    run = db.query(Run).filter(Run.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    return run
+
+@router.get("/runs/{run_id}/trajectory")
+def get_run_trajectory(run_id: str, db: Session = Depends(get_db)):
+    run = db.query(Run).filter(Run.id == run_id).first()
+    if not run or not run.trials:
+        raise HTTPException(status_code=404, detail="Run or trials not found")
+
+    # Return trajectory for the first trial or latest trial
+    trial = run.trials[0]
+    traj = trial.trajectory
+    if not traj:
+        raise HTTPException(status_code=404, detail="Trajectory record not found for trial")
+
+    if os.path.exists(traj.storage_path):
+        with open(traj.storage_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    
+    return {
+        "schema_version": traj.atif_version,
+        "trajectory_id": f"reliabench:{trial.id}",
+        "steps": traj.summary_steps
+    }
+
+# ----------------- COMPARISONS -----------------
+@router.get("/comparisons")
+def compare_experiments(experiment_ids: str, db: Session = Depends(get_db)):
+    ids = [i.strip() for i in experiment_ids.split(",") if i.strip()]
+    if not ids:
+        raise HTTPException(status_code=400, detail="Provide at least one experiment_id")
+
+    experiments = db.query(Experiment).filter(Experiment.id.in_(ids)).all()
+    comparison_data = []
+
+    for exp in experiments:
+        latest_run = exp.runs[-1] if exp.runs else None
+        comparison_data.append({
+            "experiment_id": exp.id,
+            "title": exp.title,
+            "agent_name": exp.agent.name if exp.agent else "Unknown",
+            "framework": exp.agent.framework if exp.agent else "Unknown",
+            "task_name": exp.benchmark_task.name if exp.benchmark_task else "Unknown",
+            "failure_injected": exp.failure_scenario.name if exp.failure_scenario else "None (Clean)",
+            "repetitions_k": exp.repetitions_k,
+            "pass_rate": latest_run.pass_rate if latest_run else 0.0,
+            "pass_at_k": latest_run.pass_at_k if latest_run else 0.0,
+            "pass_to_k": latest_run.pass_to_k if latest_run else 0.0,
+            "recovery_rate": latest_run.recovery_rate if latest_run else None,
+            "avg_duration_seconds": latest_run.avg_duration_seconds if latest_run else 0.0,
+            "duration_variance": latest_run.duration_variance if latest_run else 0.0,
+            "avg_cost_usd": latest_run.avg_cost_usd if latest_run else None,
+            "status": exp.status
+        })
+
+    return {"comparisons": comparison_data}
+
