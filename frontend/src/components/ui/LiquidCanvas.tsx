@@ -114,3 +114,4 @@ export const LiquidCanvas: React.FC<{ className?: string }> = ({ className = '' 
     />
   );
 };
+
