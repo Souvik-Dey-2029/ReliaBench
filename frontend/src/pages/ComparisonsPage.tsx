@@ -1,23 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { Experiment } from '../services/types';
-import { GitCompare, Trophy, TrendingUp, ShieldAlert, Award } from 'lucide-react';
+import { GitCompare, Trophy, TrendingUp, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 export const ComparisonsPage: React.FC = () => {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [comparisonResults, setComparisonResults] = useState<any[]>([]);
+  const [isCompatible, setIsCompatible] = useState<boolean>(true);
+  const [compatibilityWarning, setCompatibilityWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.getExperiments()
       .then((exps) => {
         setExperiments(exps);
-        // Pre-select first 2-3 experiments
         const initial = exps.slice(0, 3).map((e) => e.id);
         setSelectedIds(initial);
         if (initial.length > 0) {
-          api.getComparisons(initial).then((res) => setComparisonResults(res.comparisons));
+          api.getComparisons(initial).then((res) => {
+            setComparisonResults(res.comparisons);
+            setIsCompatible(res.is_compatible);
+            setCompatibilityWarning(res.compatibility_warning);
+          });
         }
       })
       .finally(() => setLoading(false));
@@ -26,7 +31,7 @@ export const ComparisonsPage: React.FC = () => {
   const handleToggle = async (id: string) => {
     let next: string[];
     if (selectedIds.includes(id)) {
-      if (selectedIds.length === 1) return; // Keep at least one
+      if (selectedIds.length === 1) return;
       next = selectedIds.filter((item) => item !== id);
     } else {
       next = [...selectedIds, id];
@@ -34,23 +39,25 @@ export const ComparisonsPage: React.FC = () => {
     setSelectedIds(next);
     const res = await api.getComparisons(next);
     setComparisonResults(res.comparisons);
+    setIsCompatible(res.is_compatible);
+    setCompatibilityWarning(res.compatibility_warning);
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-white flex items-center gap-2">
-          <GitCompare size={28} className="text-[#35D5E8]" />
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="pb-6 border-b border-[#2D332B]">
+        <h1 className="text-2xl font-black text-[#E8DDC8] flex items-center gap-2">
+          <GitCompare size={26} className="text-[#C49A55]" />
           <span>Agent Comparison Matrix</span>
         </h1>
-        <p className="text-sm text-[#9BA6B8]">
+        <p className="text-xs text-[#A7A393] font-sans mt-0.5">
           Side-by-side reliability analysis under identical benchmark conditions, repeated trials, and injected faults.
         </p>
       </div>
 
       {/* Select Experiments Bar */}
-      <div className="neo-box p-4">
-        <div className="text-xs uppercase font-bold text-[#9BA6B8] mb-2 font-mono">
+      <div className="reliabench-panel p-4">
+        <div className="text-[10px] uppercase font-bold text-[#89977A] mb-2 font-mono">
           Select Experiments to Compare ({selectedIds.length} Selected)
         </div>
         <div className="flex flex-wrap gap-2">
@@ -60,10 +67,10 @@ export const ComparisonsPage: React.FC = () => {
               <button
                 key={exp.id}
                 onClick={() => handleToggle(exp.id)}
-                className={`px-3 py-1.5 text-xs font-mono font-bold rounded border transition-all ${
+                className={`px-3 py-1.5 text-xs font-mono font-bold rounded border transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-[#35D5E8] text-black border-black shadow-[2px_2px_0px_0px_#000]'
-                    : 'bg-[#111318] text-[#9BA6B8] border-[#2B313E] hover:border-slate-500'
+                    ? 'bg-[#1D211C] text-[#C7D94C] border-[#3B5436] shadow-[2px_2px_0px_0px_#10120F]'
+                    : 'bg-[#141713] text-[#A7A393] border-[#2D332B] hover:border-slate-500'
                 }`}
               >
                 {exp.agent?.name} — {exp.title.slice(0, 30)}...
@@ -73,35 +80,45 @@ export const ComparisonsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Incompatible Conditions Warning Banner */}
+      {!isCompatible && compatibilityWarning && (
+        <div className="bg-[#2B231D] border border-[#5E3F2A] p-4 rounded flex items-start gap-3 text-xs font-mono text-[#F06B45]">
+          <AlertTriangle size={18} className="shrink-0 text-[#F06B45] mt-0.5" />
+          <div>
+            <strong>Cross-Condition Comparison Warning:</strong> {compatibilityWarning}
+          </div>
+        </div>
+      )}
+
       {/* Comparison Table */}
       {comparisonResults.length > 0 && (
-        <div className="neo-box p-6 overflow-x-auto">
-          <table className="w-full text-left border-collapse text-sm">
+        <div className="reliabench-panel p-6 overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs font-mono">
             <thead>
-              <tr className="border-b-2 border-[#2B313E] text-xs font-mono text-[#9BA6B8] uppercase">
+              <tr className="border-b border-[#2D332B] text-[10px] text-[#89977A] uppercase">
                 <th className="py-3 px-4">Metric / Dimension</th>
                 {comparisonResults.map((c, i) => (
                   <th key={i} className="py-3 px-4">
-                    <div className="text-[#35D5E8] text-sm font-black">{c.agent_name}</div>
-                    <div className="text-[10px] text-slate-400 font-normal truncate max-w-xs">{c.title}</div>
+                    <div className="text-[#E8DDC8] text-sm font-black">{c.agent_name}</div>
+                    <div className="text-[10px] text-[#89977A] font-normal truncate max-w-xs">{c.title}</div>
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#2B313E] font-mono text-xs">
+            <tbody className="divide-y divide-[#2D332B]/50">
               {/* Task & Setup */}
               <tr>
-                <td className="py-3 px-4 font-bold text-white">Benchmark Task</td>
+                <td className="py-3 px-4 font-bold text-[#E8DDC8]">Benchmark Task</td>
                 {comparisonResults.map((c, i) => (
-                  <td key={i} className="py-3 px-4 text-[#9BA6B8]">{c.task_name}</td>
+                  <td key={i} className="py-3 px-4 text-[#A7A393]">{c.task_name}</td>
                 ))}
               </tr>
 
               <tr>
-                <td className="py-3 px-4 font-bold text-white">Fault Injected</td>
+                <td className="py-3 px-4 font-bold text-[#E8DDC8]">Fault Injected</td>
                 {comparisonResults.map((c, i) => (
                   <td key={i} className="py-3 px-4">
-                    <span className={c.failure_injected !== 'None (Clean)' ? 'text-[#FF725E] font-bold' : 'text-slate-400'}>
+                    <span className={c.failure_injected !== 'None (Clean)' ? 'text-[#F06B45] font-bold' : 'text-[#89977A]'}>
                       {c.failure_injected}
                     </span>
                   </td>
@@ -109,68 +126,101 @@ export const ComparisonsPage: React.FC = () => {
               </tr>
 
               <tr>
-                <td className="py-3 px-4 font-bold text-white">Repetitions (k)</td>
+                <td className="py-3 px-4 font-bold text-[#E8DDC8]">Repetitions (k)</td>
                 {comparisonResults.map((c, i) => (
                   <td key={i} className="py-3 px-4">{c.repetitions_k}</td>
                 ))}
               </tr>
 
+              <tr>
+                <td className="py-3 px-4 font-bold text-[#E8DDC8]">Provenance</td>
+                {comparisonResults.map((c, i) => (
+                  <td key={i} className="py-3 px-4">
+                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                      c.source_mode === 'REAL_EXECUTION'
+                        ? 'bg-[#1D2B1C] text-[#C7D94C] border border-[#3B5436]'
+                        : 'bg-[#2B231D] text-[#F06B45] border border-[#5E3F2A]'
+                    }`}>
+                      {c.source_mode}
+                    </span>
+                  </td>
+                ))}
+              </tr>
+
               {/* Core Metrics */}
-              <tr className="bg-[#171B24]">
-                <td className="py-3 px-4 font-bold text-[#D9FF47]">Pass Rate (Overall)</td>
+              <tr className="bg-[#141713]">
+                <td className="py-3 px-4 font-bold text-[#C7D94C]">Pass Rate</td>
                 {comparisonResults.map((c, i) => (
-                  <td key={i} className="py-3 px-4 font-black text-lg text-[#D9FF47]">
-                    {(c.pass_rate * 100).toFixed(1)}%
+                  <td key={i} className="py-3 px-4 font-black text-base text-[#C7D94C]">
+                    {c.pass_rate !== null ? `${(c.pass_rate * 100).toFixed(1)}%` : 'N/A'}
                   </td>
                 ))}
               </tr>
 
               <tr>
-                <td className="py-3 px-4 font-bold text-white">Pass@k (At least 1 success)</td>
+                <td className="py-3 px-4 font-bold text-[#E8DDC8]">95% CI (Wilson Score)</td>
                 {comparisonResults.map((c, i) => (
-                  <td key={i} className="py-3 px-4 font-bold text-white">
-                    {(c.pass_at_k * 100).toFixed(1)}%
+                  <td key={i} className="py-3 px-4 text-[#89977A]">
+                    {c.ci_lower !== null && c.ci_lower !== undefined
+                      ? `[${(c.ci_lower * 100).toFixed(0)}%, ${(c.ci_upper * 100).toFixed(0)}%]`
+                      : 'N/A'}
                   </td>
                 ))}
               </tr>
 
               <tr>
-                <td className="py-3 px-4 font-bold text-white">Pass^k (All k succeed)</td>
+                <td className="py-3 px-4 font-bold text-[#E8DDC8]">Pass@k (At least 1 success)</td>
                 {comparisonResults.map((c, i) => (
-                  <td key={i} className="py-3 px-4 font-bold text-white">
-                    {(c.pass_to_k * 100).toFixed(1)}%
-                  </td>
-                ))}
-              </tr>
-
-              <tr className="bg-[#171B24]">
-                <td className="py-3 px-4 font-bold text-[#35D5E8]">Fault Recovery Rate</td>
-                {comparisonResults.map((c, i) => (
-                  <td key={i} className="py-3 px-4 font-bold text-[#35D5E8]">
-                    {c.recovery_rate !== null ? `${(c.recovery_rate * 100).toFixed(1)}%` : 'N/A (Clean Run)'}
+                  <td key={i} className="py-3 px-4 font-bold text-[#E8DDC8]">
+                    {c.pass_at_k !== null ? `${(c.pass_at_k * 100).toFixed(1)}%` : 'N/A'}
                   </td>
                 ))}
               </tr>
 
               <tr>
-                <td className="py-3 px-4 font-bold text-white">Mean Duration</td>
+                <td className="py-3 px-4 font-bold text-[#E8DDC8]">Pass^k (All k succeed)</td>
+                {comparisonResults.map((c, i) => (
+                  <td key={i} className="py-3 px-4 font-bold text-[#E8DDC8]">
+                    {c.pass_to_k !== null ? `${(c.pass_to_k * 100).toFixed(1)}%` : 'N/A'}
+                  </td>
+                ))}
+              </tr>
+
+              <tr className="bg-[#141713]">
+                <td className="py-3 px-4 font-bold text-[#C49A55]">Fault Recovery Rate</td>
+                {comparisonResults.map((c, i) => (
+                  <td key={i} className="py-3 px-4 font-bold text-[#C49A55]">
+                    {c.recovery_rate !== null ? `${(c.recovery_rate * 100).toFixed(1)}%` : 'Clean Run'}
+                  </td>
+                ))}
+              </tr>
+
+              <tr>
+                <td className="py-3 px-4 font-bold text-[#E8DDC8]">Mean Duration</td>
                 {comparisonResults.map((c, i) => (
                   <td key={i} className="py-3 px-4">{c.avg_duration_seconds}s</td>
                 ))}
               </tr>
 
               <tr>
-                <td className="py-3 px-4 font-bold text-white">Duration Variance (s²)</td>
+                <td className="py-3 px-4 font-bold text-[#E8DDC8]">Median Duration</td>
                 {comparisonResults.map((c, i) => (
-                  <td key={i} className="py-3 px-4 text-slate-400">{c.duration_variance}</td>
+                  <td key={i} className="py-3 px-4">{c.median_duration_seconds}s</td>
                 ))}
               </tr>
 
               <tr>
-                <td className="py-3 px-4 font-bold text-white">Avg Cost per Run (USD)</td>
+                <td className="py-3 px-4 font-bold text-[#E8DDC8]">Duration Variance (s²)</td>
                 {comparisonResults.map((c, i) => (
-                  <td key={i} className="py-3 px-4 text-[#D9FF47]">
-                    {c.avg_cost_usd ? `$${c.avg_cost_usd.toFixed(4)}` : 'N/A'}
+                  <td key={i} className="py-3 px-4 text-[#89977A]">{c.duration_variance}</td>
+                ))}
+              </tr>
+
+              <tr>
+                <td className="py-3 px-4 font-bold text-[#E8DDC8]">Avg Cost per Run (USD)</td>
+                {comparisonResults.map((c, i) => (
+                  <td key={i} className="py-3 px-4 text-[#C7D94C]">
+                    {c.avg_cost_usd ? `$${c.avg_cost_usd.toFixed(4)}` : 'Not measured'}
                   </td>
                 ))}
               </tr>
@@ -181,4 +231,3 @@ export const ComparisonsPage: React.FC = () => {
     </div>
   );
 };
-

@@ -1,43 +1,56 @@
 import React from 'react';
-import { Terminal, Shield, Zap, Search } from 'lucide-react';
+import { Terminal, Zap, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface NavbarProps {
   activeMode?: string;
+  sourceMode?: string;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeMode = 'SIMULATOR_DEMO' }) => {
-  const isSimulator = activeMode.includes('SIMULATOR') || activeMode.includes('DEMO');
+export const Navbar: React.FC<NavbarProps> = ({
+  activeMode = 'SIMULATOR_DEMO',
+  sourceMode = 'SIMULATOR'
+}) => {
+  const isSimulator = activeMode.includes('SIMULATOR') || sourceMode === 'SIMULATOR';
 
   return (
-    <header className="h-16 bg-[#14171E] border-b-2 border-[#2B313E] px-6 flex items-center justify-between sticky top-0 z-40">
+    <header className="h-16 bg-[#171A16] border-b border-[#2D332B] px-6 flex items-center justify-between sticky top-0 z-40">
       <div className="flex items-center gap-4">
+        {/* Back to Home Button */}
+        <Link
+          to="/"
+          className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#A7A393] hover:text-[#E8DDC8] px-2.5 py-1 rounded bg-[#1D211C] border border-[#2D332B] transition-colors"
+        >
+          <ArrowLeft size={14} className="text-[#F06B45]" />
+          <span>Home</span>
+        </Link>
+
         {/* Environment Mode Pill */}
         <div
-          className={`flex items-center gap-2 px-3 py-1 text-xs font-mono font-bold uppercase border-2 shadow-[2px_2px_0px_0px_#000] ${
+          className={`flex items-center gap-2 px-3 py-1 text-xs font-mono font-bold uppercase border shadow-[2px_2px_0px_0px_#10120F] ${
             isSimulator
-              ? 'bg-[#FF725E] text-black border-black'
-              : 'bg-[#D9FF47] text-black border-black'
+              ? 'bg-[#2B231D] text-[#F06B45] border-[#5E3F2A]'
+              : 'bg-[#1D2B1C] text-[#C7D94C] border-[#3B5436]'
           }`}
         >
-          <Zap size={14} />
-          <span>{isSimulator ? 'SIMULATOR MODE (DEMO DATA)' : 'HARBOR ENGINE ACTIVE'}</span>
+          <Zap size={13} />
+          <span>{isSimulator ? 'SIMULATOR MODE · SYNTHETIC DATA' : 'HARBOR ENGINE · VERIFIED RESULTS'}</span>
         </div>
 
-        <div className="text-xs text-[#9BA6B8] hidden md:block font-mono">
-          Global AI Hackathon | PS02: AI Agent Benchmarking
+        <div className="text-xs text-[#89977A] hidden lg:block font-mono">
+          Global AI Hackathon | PS02
         </div>
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 bg-[#171A22] border-2 border-[#2B313E] px-3 py-1.5 text-xs text-[#9BA6B8] font-mono">
-          <Terminal size={14} className="text-[#35D5E8]" />
-          <span>v0.1.0-alpha</span>
+        <div className="flex items-center gap-2 bg-[#1D211C] border border-[#2D332B] px-3 py-1.5 text-xs text-[#A7A393] font-mono">
+          <Terminal size={13} className="text-[#C7D94C]" />
+          <span>v0.2.0-beta</span>
         </div>
-        <div className="w-8 h-8 rounded-full bg-[#427BFF] border-2 border-black flex items-center justify-center font-bold text-xs text-white shadow-[2px_2px_0px_0px_#000]">
-          AG
+        <div className="w-8 h-8 rounded-full bg-[#1D211C] border border-[#2D332B] flex items-center justify-center font-bold text-xs text-[#C7D94C]">
+          RB
         </div>
       </div>
     </header>
   );
 };
-

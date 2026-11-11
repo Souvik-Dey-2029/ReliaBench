@@ -7,7 +7,9 @@ export interface Agent {
   adapter_type: string;
   model_provider?: string;
   model_name?: string;
-  status: string;
+  endpoint_url?: string;
+  status: 'CONFIGURED' | 'VALIDATED' | 'AVAILABLE' | 'UNAVAILABLE' | 'ERROR' | 'SIMULATOR';
+  source_mode: 'REAL_EXECUTION' | 'SIMULATOR';
   is_demo: boolean;
   created_at: string;
 }
@@ -15,14 +17,16 @@ export interface Agent {
 export interface BenchmarkTask {
   id: string;
   name: string;
+  version: string;
   category: string;
   difficulty: 'EASY' | 'MEDIUM' | 'HARD';
   description: string;
   instruction: string;
   expected_outcome: string;
-  verification_method: string;
+  verification_method: 'ASSERTION_SCRIPT' | 'SCRIPT_VERIFIER' | 'FILE_STATE' | 'STRUCTURED_OUTPUT';
   time_limit_seconds: number;
   environment_type: string;
+  source_mode: 'REAL_EXECUTION' | 'SIMULATOR';
   is_demo: boolean;
   created_at: string;
 }
@@ -40,12 +44,13 @@ export interface FailureScenario {
 export interface Trial {
   id: string;
   trial_number: number;
-  status: 'PASSED' | 'FAILED' | 'RECOVERED' | 'TIMEOUT';
+  status: 'PASSED' | 'FAILED' | 'RECOVERED' | 'TIMEOUT' | 'INFRASTRUCTURE_ERROR';
   reward_score: number;
   duration_seconds: number;
   failure_injected: boolean;
   failure_recovered: boolean;
   error_message?: string;
+  source_mode: 'REAL_EXECUTION' | 'SIMULATOR';
   created_at: string;
 }
 
@@ -54,15 +59,19 @@ export interface Run {
   total_trials: number;
   successful_trials: number;
   failed_trials: number;
-  pass_rate: number;
-  pass_at_k: number;
-  pass_to_k: number;
-  recovery_rate?: number;
+  pass_rate: number | null;
+  ci_lower?: number | null;
+  ci_upper?: number | null;
+  pass_at_k: number | null;
+  pass_to_k: number | null;
+  recovery_rate: number | null;
   avg_duration_seconds: number;
+  median_duration_seconds: number;
   duration_variance: number;
-  avg_cost_usd?: number;
-  total_tokens?: number;
+  avg_cost_usd?: number | null;
+  total_tokens?: number | null;
   status: string;
+  source_mode: 'REAL_EXECUTION' | 'SIMULATOR';
   trials: Trial[];
   created_at: string;
 }
@@ -77,6 +86,7 @@ export interface Experiment {
   repetitions_k: number;
   timeout_seconds: number;
   status: string;
+  source_mode: 'REAL_EXECUTION' | 'SIMULATOR';
   is_demo: boolean;
   created_at: string;
   started_at?: string;
@@ -91,10 +101,12 @@ export interface DashboardSummary {
   total_agents: number;
   total_benchmarks: number;
   total_experiments: number;
-  overall_pass_rate: number;
+  overall_pass_rate: number | null;
   average_duration_seconds: number;
-  average_cost_usd?: number;
+  median_duration_seconds: number;
+  average_cost_usd?: number | null;
   active_environment_mode: string;
+  source_mode: string;
   harbor_status: {
     available: boolean;
     installed_version?: string;
@@ -110,12 +122,14 @@ export interface DashboardSummary {
     experiment_title: string;
     agent_name: string;
     error_message: string;
+    source_mode: string;
     created_at: string;
   }>;
   reliability_distribution: Array<{
     category: string;
     pass_rate: number;
     recovery_rate: number;
+    sample_size: number;
   }>;
 }
 
@@ -156,4 +170,3 @@ export interface ATIFTrajectory {
   }>;
   final_metrics?: Record<string, any>;
 }
-

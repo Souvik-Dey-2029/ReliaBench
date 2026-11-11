@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
@@ -37,28 +37,47 @@ def health_check():
     }
 
 @router.get("/dashboard/summary", response_model=DashboardSummary)
-def get_dashboard_summary(db: Session = Depends(get_db)):
-    agents_count = db.query(Agent).count()
-    benchmarks_count = db.query(BenchmarkTask).count()
-    experiments_count = db.query(Experiment).count()
+def get_dashboard_summary(source_mode: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    agents_query = db.query(Agent)
+    benchmarks_query = db.query(BenchmarkTask)
+    experiments_query = db.query(Experiment)
+    runs_query = db.query(Run)
 
-    runs = db.query(Run).all()
-    overall_pass = 0.0
+    if source_mode:
+        agents_query = agents_query.filter(Agent.source_mode == source_mode)
+        benchmarks_query = benchmarks_query.filter(BenchmarkTask.source_mode == source_mode)
+        experiments_query = experiments_query.filter(Experiment.source_mode == source_mode)
+        runs_query = runs_query.filter(Run.source_mode == source_mode)
+
+    agents_count = agents_query.count()
+    benchmarks_count = benchmarks_query.count()
+    experiments_count = experiments_query.count()
+
+    runs = runs_query.all()
+    overall_pass = None
     avg_duration = 0.0
-    avg_cost = 0.0
+    median_duration = 0.0
+    avg_cost = None
 
     if runs:
-        valid_runs = [r for r in runs if r.total_trials > 0]
+        valid_runs = [r for r in runs if r.total_trials > 0 and r.pass_rate is not None]
         if valid_runs:
             overall_pass = sum(r.pass_rate for r in valid_runs) / len(valid_runs)
             avg_duration = sum(r.avg_duration_seconds for r in valid_runs) / len(valid_runs)
+            durations = [r.avg_duration_seconds for r in valid_runs]
+            sorted_d = sorted(durations)
+            median_duration = sorted_d[len(sorted_d) // 2]
             costs = [r.avg_cost_usd for r in valid_runs if r.avg_cost_usd is not None]
-            avg_cost = (sum(costs) / len(costs)) if costs else 0.003
+            avg_cost = (sum(costs) / len(costs)) if costs else None
 
-    recent_exps = db.query(Experiment).order_by(Experiment.created_at.desc()).limit(5).all()
+    recent_exps = experiments_query.order_by(Experiment.created_at.desc()).limit(5).all()
 
     # Recent failure trials
-    failed_trials = db.query(Trial).filter(Trial.status == "FAILED").order_by(Trial.created_at.desc()).limit(5).all()
+    trials_query = db.query(Trial).filter(Trial.status == "FAILED")
+    if source_mode:
+        trials_query = trials_query.filter(Trial.source_mode == source_mode)
+    failed_trials = trials_query.order_by(Trial.created_at.desc()).limit(5).all()
+
     recent_failures = []
     for ft in failed_trials:
         run = ft.run
@@ -68,6 +87,7 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
             "experiment_title": exp.title if exp else "Unknown",
             "agent_name": exp.agent.name if exp and exp.agent else "Unknown",
             "error_message": ft.error_message or "Verifier failed",
+            "source_mode": ft.source_mode,
             "created_at": ft.created_at.isoformat()
         })
 
@@ -75,20 +95,30 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     categories = db.query(BenchmarkTask.category).distinct().all()
     rel_dist = []
     for (cat,) in categories:
-        cat_tasks = db.query(BenchmarkTask.id).filter(BenchmarkTask.category == cat).all()
-        cat_task_ids = [t[0] for t in cat_tasks]
-        cat_runs = db.query(Run).join(Experiment).filter(Experiment.benchmark_task_id.in_(cat_task_ids)).all()
-        if cat_runs:
-            pass_rt = sum(r.pass_rate for r in cat_runs) / len(cat_runs)
-            rec_runs = [r.recovery_rate for r in cat_runs if r.recovery_rate is not None]
+        cat_tasks = db.query(BenchmarkTask.id).filter(BenchmarkTask.category == cat)
+        if source_mode:
+            cat_tasks = cat_tasks.filter(BenchmarkTask.source_mode == source_mode)
+        cat_task_ids = [t[0] for t in cat_tasks.all()]
+        
+        cat_runs = db.query(Run).join(Experiment).filter(Experiment.benchmark_task_id.in_(cat_task_ids))
+        if source_mode:
+            cat_runs = cat_runs.filter(Run.source_mode == source_mode)
+        cat_runs_list = cat_runs.all()
+
+        if cat_runs_list:
+            valid_cat_runs = [r for r in cat_runs_list if r.pass_rate is not None]
+            pass_rt = (sum(r.pass_rate for r in valid_cat_runs) / len(valid_cat_runs)) if valid_cat_runs else 0.0
+            rec_runs = [r.recovery_rate for r in cat_runs_list if r.recovery_rate is not None]
             rec_rt = (sum(rec_runs) / len(rec_runs)) if rec_runs else 0.0
         else:
             pass_rt = 0.0
             rec_rt = 0.0
+
         rel_dist.append({
             "category": cat,
             "pass_rate": round(pass_rt, 3),
-            "recovery_rate": round(rec_rt, 3)
+            "recovery_rate": round(rec_rt, 3),
+            "sample_size": len(cat_runs_list)
         })
 
     harbor_status = HarborAdapter(settings.HARBOR_BIN_PATH, settings.HARBOR_VERSION_REQUIRED).check_availability()
@@ -98,10 +128,12 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
         total_agents=agents_count,
         total_benchmarks=benchmarks_count,
         total_experiments=experiments_count,
-        overall_pass_rate=round(overall_pass, 3),
+        overall_pass_rate=round(overall_pass, 3) if overall_pass is not None else None,
         average_duration_seconds=round(avg_duration, 1),
+        median_duration_seconds=round(median_duration, 1),
         average_cost_usd=round(avg_cost, 4) if avg_cost else None,
         active_environment_mode=active_mode,
+        source_mode=source_mode or "ALL",
         harbor_status=harbor_status,
         recent_experiments=recent_exps,
         recent_failures=recent_failures,
@@ -115,7 +147,13 @@ def list_agents(db: Session = Depends(get_db)):
 
 @router.post("/agents", response_model=AgentResponse, status_code=201)
 def create_agent(agent_in: AgentCreate, db: Session = Depends(get_db)):
-    agent = Agent(**agent_in.model_dump())
+    # Auto-assign status based on adapter
+    status = "CONFIGURED"
+    if agent_in.adapter_type == "simulator":
+        status = "SIMULATOR"
+    agent_data = agent_in.model_dump()
+    agent_data["status"] = status
+    agent = Agent(**agent_data)
     db.add(agent)
     db.commit()
     db.refresh(agent)
@@ -127,6 +165,26 @@ def get_agent(agent_id: str, db: Session = Depends(get_db)):
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent
+
+@router.post("/agents/{agent_id}/validate")
+def validate_agent(agent_id: str, db: Session = Depends(get_db)):
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    # Check adapter connectivity
+    if agent.adapter_type == "simulator":
+        agent.status = "VALIDATED"
+    elif agent.adapter_type == "harbor_cli":
+        harbor_ad = HarborAdapter(settings.HARBOR_BIN_PATH, settings.HARBOR_VERSION_REQUIRED)
+        avail = harbor_ad.check_availability()
+        agent.status = "AVAILABLE" if (avail["available"] and avail["docker_available"]) else "UNAVAILABLE"
+    else:
+        agent.status = "VALIDATED"
+
+    db.commit()
+    db.refresh(agent)
+    return {"message": "Agent validation complete", "status": agent.status}
 
 @router.put("/agents/{agent_id}", response_model=AgentResponse)
 def update_agent(agent_id: str, agent_in: AgentUpdate, db: Session = Depends(get_db)):
@@ -187,7 +245,7 @@ def create_experiment(exp_in: ExperimentCreate, db: Session = Depends(get_db)):
     if not task:
         raise HTTPException(status_code=400, detail="Invalid benchmark_task_id")
 
-    exp = Experiment(**exp_in.model_dump(), status="QUEUED")
+    exp = Experiment(**exp_in.model_dump(), status="QUEUED", source_mode=agent.source_mode)
     db.add(exp)
     db.commit()
     db.refresh(exp)
@@ -233,7 +291,6 @@ def get_run_trajectory(run_id: str, db: Session = Depends(get_db)):
     if not run or not run.trials:
         raise HTTPException(status_code=404, detail="Run or trials not found")
 
-    # Return trajectory for the first trial or latest trial
     trial = run.trials[0]
     traj = trial.trajectory
     if not traj:
@@ -259,6 +316,19 @@ def compare_experiments(experiment_ids: str, db: Session = Depends(get_db)):
     experiments = db.query(Experiment).filter(Experiment.id.in_(ids)).all()
     comparison_data = []
 
+    # Check condition compatibility across compared experiments
+    task_ids = set()
+    failure_ids = set()
+    repetitions_set = set()
+
+    for exp in experiments:
+        task_ids.add(exp.benchmark_task_id)
+        failure_ids.add(exp.failure_scenario_id)
+        repetitions_set.add(exp.repetitions_k)
+
+    is_compatible = (len(task_ids) <= 1 and len(failure_ids) <= 1 and len(repetitions_set) <= 1)
+    compatibility_warning = None if is_compatible else "Warning: Selected experiments evaluate different benchmark tasks, failure conditions, or repetition counts (k). Cross-condition comparisons should be interpreted with caution."
+
     for exp in experiments:
         latest_run = exp.runs[-1] if exp.runs else None
         comparison_data.append({
@@ -266,18 +336,26 @@ def compare_experiments(experiment_ids: str, db: Session = Depends(get_db)):
             "title": exp.title,
             "agent_name": exp.agent.name if exp.agent else "Unknown",
             "framework": exp.agent.framework if exp.agent else "Unknown",
+            "model_name": exp.agent.model_name if exp.agent else "Unknown",
             "task_name": exp.benchmark_task.name if exp.benchmark_task else "Unknown",
             "failure_injected": exp.failure_scenario.name if exp.failure_scenario else "None (Clean)",
             "repetitions_k": exp.repetitions_k,
-            "pass_rate": latest_run.pass_rate if latest_run else 0.0,
-            "pass_at_k": latest_run.pass_at_k if latest_run else 0.0,
-            "pass_to_k": latest_run.pass_to_k if latest_run else 0.0,
+            "pass_rate": latest_run.pass_rate if latest_run else None,
+            "ci_lower": latest_run.ci_lower if latest_run else None,
+            "ci_upper": latest_run.ci_upper if latest_run else None,
+            "pass_at_k": latest_run.pass_at_k if latest_run else None,
+            "pass_to_k": latest_run.pass_to_k if latest_run else None,
             "recovery_rate": latest_run.recovery_rate if latest_run else None,
             "avg_duration_seconds": latest_run.avg_duration_seconds if latest_run else 0.0,
+            "median_duration_seconds": latest_run.median_duration_seconds if latest_run else 0.0,
             "duration_variance": latest_run.duration_variance if latest_run else 0.0,
             "avg_cost_usd": latest_run.avg_cost_usd if latest_run else None,
+            "source_mode": exp.source_mode,
             "status": exp.status
         })
 
-    return {"comparisons": comparison_data}
-
+    return {
+        "comparisons": comparison_data,
+        "is_compatible": is_compatible,
+        "compatibility_warning": compatibility_warning
+    }

@@ -18,8 +18,9 @@ export const api = {
     return res.json();
   },
 
-  async getDashboardSummary(): Promise<DashboardSummary> {
-    const res = await fetch(`${API_BASE}/dashboard/summary`);
+  async getDashboardSummary(sourceMode?: string): Promise<DashboardSummary> {
+    const url = sourceMode ? `${API_BASE}/dashboard/summary?source_mode=${sourceMode}` : `${API_BASE}/dashboard/summary`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch dashboard summary');
     return res.json();
   },
@@ -38,6 +39,12 @@ export const api = {
       body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error('Failed to create agent');
+    return res.json();
+  },
+
+  async validateAgent(id: string): Promise<{ message: string; status: string }> {
+    const res = await fetch(`${API_BASE}/agents/${id}/validate`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to validate agent');
     return res.json();
   },
 
@@ -125,4 +132,3 @@ export const api = {
     return res.json();
   }
 };
-

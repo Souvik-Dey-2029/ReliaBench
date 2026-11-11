@@ -9,36 +9,39 @@ from app.core.config import settings
 
 DEMO_AGENTS = [
     {
-        "name": "Devin-Mock-v2",
+        "name": "Devin-Reference-v2",
         "description": "Autonomous software engineering agent configured with terminal and file tools.",
         "framework": "custom",
         "version": "2.4.0",
         "adapter_type": "simulator",
         "model_provider": "anthropic",
         "model_name": "claude-3-7-sonnet",
-        "status": "READY",
+        "status": "VALIDATED",
+        "source_mode": "SIMULATOR",
         "is_demo": True
     },
     {
-        "name": "Claude-Code-Sim",
+        "name": "Claude-Code-Engine",
         "description": "Agentic CLI assistant specializing in repo navigation, editing, and test repair.",
         "framework": "harbor_native",
         "version": "1.0.12",
         "adapter_type": "harbor_cli",
         "model_provider": "anthropic",
         "model_name": "claude-3-5-sonnet",
-        "status": "READY",
+        "status": "CONFIGURED",
+        "source_mode": "SIMULATOR",
         "is_demo": True
     },
     {
-        "name": "AutoGPT-Ref",
+        "name": "AutoGPT-Loop-Ref",
         "description": "Classic autonomous loop agent testing long-horizon goal decomposition.",
         "framework": "autogen",
         "version": "0.5.2",
         "adapter_type": "simulator",
         "model_provider": "openai",
         "model_name": "gpt-4o",
-        "status": "READY",
+        "status": "VALIDATED",
+        "source_mode": "SIMULATOR",
         "is_demo": True
     },
     {
@@ -49,7 +52,8 @@ DEMO_AGENTS = [
         "adapter_type": "simulator",
         "model_provider": "google",
         "model_name": "gemini-3-flash",
-        "status": "READY",
+        "status": "AVAILABLE",
+        "source_mode": "SIMULATOR",
         "is_demo": True
     }
 ]
@@ -57,6 +61,7 @@ DEMO_AGENTS = [
 DEMO_BENCHMARKS = [
     {
         "name": "BugFix: Django CSRF Middleware bypass",
+        "version": "1.0.0",
         "category": "Security & Web",
         "difficulty": "HARD",
         "description": "Isolate and patch CVE regression where custom token headers are improperly validated.",
@@ -64,21 +69,25 @@ DEMO_BENCHMARKS = [
         "expected_outcome": "All unit tests pass and security assertion returns exit 0.",
         "verification_method": "ASSERTION_SCRIPT",
         "time_limit_seconds": 240,
+        "source_mode": "SIMULATOR",
         "is_demo": True
     },
     {
         "name": "DataPipeline: Broken Pandas Aggregation",
+        "version": "1.1.0",
         "category": "Data Engineering",
         "difficulty": "EASY",
         "description": "Fix timestamp truncation causing incorrect groupby sums across monthly time zones.",
         "instruction": "Fix transform.py to localize timestamps to UTC before month-end aggregation.",
         "expected_outcome": "Aggregated metrics match fixture table data/expected.csv exactly.",
-        "verification_method": "UNIT_TESTS",
+        "verification_method": "SCRIPT_VERIFIER",
         "time_limit_seconds": 90,
+        "source_mode": "SIMULATOR",
         "is_demo": True
     },
     {
         "name": "APIMock: Payment Gateway Error Handling",
+        "version": "2.0.0",
         "category": "Resilience & Tools",
         "difficulty": "MEDIUM",
         "description": "Ensure agent properly handles HTTP 429 rate limits and retries with exponential backoff.",
@@ -86,17 +95,20 @@ DEMO_BENCHMARKS = [
         "expected_outcome": "Payment successfully confirms on attempt 3 without crashing.",
         "verification_method": "ASSERTION_SCRIPT",
         "time_limit_seconds": 120,
+        "source_mode": "SIMULATOR",
         "is_demo": True
     },
     {
         "name": "Refactor: SQL Model Optimization",
+        "version": "1.0.0",
         "category": "Database & ORM",
         "difficulty": "MEDIUM",
         "description": "Resolve N+1 query problem by replacing naive iteration with SQLAlchemy joinedload.",
         "instruction": "Refactor queries.py get_user_orders to reduce DB roundtrips from 51 to 1.",
         "expected_outcome": "Query count assertion strictly equals 1.",
-        "verification_method": "ASSERTION_SCRIPT",
+        "verification_method": "STRUCTURED_OUTPUT",
         "time_limit_seconds": 150,
+        "source_mode": "SIMULATOR",
         "is_demo": True
     }
 ]
@@ -139,7 +151,7 @@ DEMO_FAILURES = [
 def seed_demo_data_if_empty(db: Session):
     """
     Checks if database is populated. If empty, seeds realistic, mathematically verified demo records.
-    All demo records are clearly flagged with is_demo=True.
+    All demo records are clearly flagged with source_mode='SIMULATOR' and is_demo=True.
     """
     if db.query(Agent).first() is not None:
         return
@@ -168,11 +180,11 @@ def seed_demo_data_if_empty(db: Session):
         db.flush()
         failures_map[scen.code] = scen
 
-    # 4. Create Pre-seeded Benchmark Experiments with verified metrics
+    # 4. Create Pre-seeded Benchmark Experiments
     exp_configs = [
         {
             "title": "Claude-Code: Django CSRF Security Patch (Clean)",
-            "agent": agents_map["Claude-Code-Sim"],
+            "agent": agents_map["Claude-Code-Engine"],
             "task": benchmarks_map["BugFix: Django CSRF Middleware bypass"],
             "failure": None,
             "k": 3,
@@ -181,16 +193,16 @@ def seed_demo_data_if_empty(db: Session):
         },
         {
             "title": "Claude-Code: Payment Gateway with HTTP 500 Injection",
-            "agent": agents_map["Claude-Code-Sim"],
+            "agent": agents_map["Claude-Code-Engine"],
             "task": benchmarks_map["APIMock: Payment Gateway Error Handling"],
             "failure": failures_map["TOOL_HTTP_500"],
             "k": 3,
             "trial_durations": [32.0, 36.4, 30.8],
-            "trial_statuses": ["RECOVERED", "RECOVERED", "FAILED"]  # 2 recovered, 1 failed
+            "trial_statuses": ["RECOVERED", "RECOVERED", "FAILED"]
         },
         {
-            "title": "Devin-Mock: Broken Pandas Aggregation (Clean)",
-            "agent": agents_map["Devin-Mock-v2"],
+            "title": "Devin-Reference: Broken Pandas Aggregation (Clean)",
+            "agent": agents_map["Devin-Reference-v2"],
             "task": benchmarks_map["DataPipeline: Broken Pandas Aggregation"],
             "failure": None,
             "k": 3,
@@ -198,26 +210,27 @@ def seed_demo_data_if_empty(db: Session):
             "trial_statuses": ["PASSED", "PASSED", "PASSED"]
         },
         {
-            "title": "AutoGPT-Ref: Payment Gateway with Timeout Injection",
-            "agent": agents_map["AutoGPT-Ref"],
+            "title": "AutoGPT-Loop: Payment Gateway with Timeout Injection",
+            "agent": agents_map["AutoGPT-Loop-Ref"],
             "task": benchmarks_map["APIMock: Payment Gateway Error Handling"],
             "failure": failures_map["TOOL_TIMEOUT"],
             "k": 3,
             "trial_durations": [45.1, 48.0, 42.9],
-            "trial_statuses": ["FAILED", "RECOVERED", "FAILED"]  # 1 recovered, 2 failed
+            "trial_statuses": ["FAILED", "RECOVERED", "FAILED"]
         }
     ]
 
     for cfg in exp_configs:
         exp = Experiment(
             title=cfg["title"],
-            description="Automated baseline experiment testing reliability & repeatability.",
+            description="Automated baseline experiment testing reliability & repeatability under controlled trials.",
             agent_id=cfg["agent"].id,
             benchmark_task_id=cfg["task"].id,
             failure_scenario_id=cfg["failure"].id if cfg["failure"] else None,
             repetitions_k=cfg["k"],
             timeout_seconds=cfg["task"].time_limit_seconds,
             status="COMPLETED",
+            source_mode="SIMULATOR",
             is_demo=True,
             started_at=datetime.now(timezone.utc),
             completed_at=datetime.now(timezone.utc)
@@ -225,7 +238,6 @@ def seed_demo_data_if_empty(db: Session):
         db.add(exp)
         db.flush()
 
-        # Compute metrics
         k = cfg["k"]
         durations = cfg["trial_durations"]
         statuses = cfg["trial_statuses"]
@@ -235,6 +247,7 @@ def seed_demo_data_if_empty(db: Session):
         injected = len(statuses) if cfg["failure"] else 0
 
         pass_rate = ReliabilityMetricsCalculator.calculate_pass_rate(success_count, len(statuses))
+        ci = ReliabilityMetricsCalculator.calculate_wilson_confidence_interval(success_count, len(statuses))
         pass_at_k = ReliabilityMetricsCalculator.calculate_pass_at_k(len(statuses), success_count, k)
         pass_to_k = ReliabilityMetricsCalculator.calculate_pass_to_k(len(statuses), success_count, k)
         recovery_rate = ReliabilityMetricsCalculator.calculate_recovery_rate(recoveries, injected)
@@ -246,14 +259,18 @@ def seed_demo_data_if_empty(db: Session):
             successful_trials=success_count,
             failed_trials=fail_count,
             pass_rate=pass_rate,
+            ci_lower=ci["lower"] if ci else None,
+            ci_upper=ci["upper"] if ci else None,
             pass_at_k=pass_at_k,
             pass_to_k=pass_to_k,
             recovery_rate=recovery_rate,
             avg_duration_seconds=dur_stats["avg_duration"],
+            median_duration_seconds=dur_stats["median_duration"],
             duration_variance=dur_stats["variance"],
             avg_cost_usd=round(random.uniform(0.0015, 0.0042), 4),
             total_tokens=random.randint(2800, 7500),
-            status="COMPLETED"
+            status="COMPLETED",
+            source_mode="SIMULATOR"
         )
         db.add(run)
         db.flush()
@@ -261,7 +278,7 @@ def seed_demo_data_if_empty(db: Session):
         for idx, (dur, st) in enumerate(zip(durations, statuses), start=1):
             is_fail_injected = (cfg["failure"] is not None)
             is_recovered = (st == "RECOVERED")
-            err_msg = f"Injected failure {cfg['failure'].name} encountered and unhandled." if st == "FAILED" and is_fail_injected else None
+            err_msg = f"Injected fault {cfg['failure'].name} encountered and unhandled." if st == "FAILED" and is_fail_injected else None
 
             trial = Trial(
                 run_id=run.id,
@@ -271,12 +288,12 @@ def seed_demo_data_if_empty(db: Session):
                 duration_seconds=dur,
                 failure_injected=is_fail_injected,
                 failure_recovered=is_recovered,
-                error_message=err_msg
+                error_message=err_msg,
+                source_mode="SIMULATOR"
             )
             db.add(trial)
             db.flush()
 
-            # Create sample ATIF Trajectory record & file
             traj_filename = f"trial_{trial.id}.json"
             traj_path = settings.TRAJECTORIES_DIR / traj_filename
 
@@ -324,7 +341,7 @@ def seed_demo_data_if_empty(db: Session):
                             "results": [
                                 {
                                     "tool_call_id": f"call_{trial.id[:6]}_1",
-                                    "content": "FAILED tests/test_security.py - AssertionError: 401 != 200" if st != "FAILED" else "Error: Subprocess timeout / HTTP 500",
+                                    "content": "FAILED tests/test_security.py - AssertionError: 401 != 200" if st != "FAILED" else "Error: Injected Fault Encountered",
                                     "is_error": (st == "FAILED")
                                 }
                             ]
@@ -353,7 +370,7 @@ def seed_demo_data_if_empty(db: Session):
                             "results": [
                                 {
                                     "tool_call_id": f"call_{trial.id[:6]}_2",
-                                    "content": "SUCCESS: All 12 assertions passed. Verifier reward = 1.0" if st in ("PASSED", "RECOVERED") else "FAILURE: Verifier reward = 0.0",
+                                    "content": "SUCCESS: All assertions passed. Verifier reward = 1.0" if st in ("PASSED", "RECOVERED") else "FAILURE: Verifier reward = 0.0",
                                     "is_error": (st == "FAILED")
                                 }
                             ]
@@ -391,4 +408,3 @@ def seed_demo_data_if_empty(db: Session):
             db.add(trajectory)
 
     db.commit()
-

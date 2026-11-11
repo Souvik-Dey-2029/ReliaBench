@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 # Base Agent
 class AgentBase(BaseModel):
@@ -11,7 +11,9 @@ class AgentBase(BaseModel):
     adapter_type: str = Field("simulator", max_length=50)
     model_provider: Optional[str] = None
     model_name: Optional[str] = None
-    status: str = "READY"
+    endpoint_url: Optional[str] = None
+    status: str = "CONFIGURED"
+    source_mode: str = "SIMULATOR"
     is_demo: bool = False
 
 class AgentCreate(AgentBase):
@@ -25,19 +27,19 @@ class AgentUpdate(BaseModel):
     adapter_type: Optional[str] = None
     model_provider: Optional[str] = None
     model_name: Optional[str] = None
+    endpoint_url: Optional[str] = None
     status: Optional[str] = None
 
 class AgentResponse(AgentBase):
     id: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Benchmark Task
 class BenchmarkTaskBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=120)
+    version: str = "1.0.0"
     category: str = "general"
     difficulty: str = "MEDIUM"
     description: str
@@ -46,6 +48,7 @@ class BenchmarkTaskBase(BaseModel):
     verification_method: str = "ASSERTION_SCRIPT"
     time_limit_seconds: int = 120
     environment_type: str = "DOCKER_SANDBOX"
+    source_mode: str = "SIMULATOR"
     is_demo: bool = False
 
 class BenchmarkTaskCreate(BenchmarkTaskBase):
@@ -54,9 +57,7 @@ class BenchmarkTaskCreate(BenchmarkTaskBase):
 class BenchmarkTaskResponse(BenchmarkTaskBase):
     id: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Failure Scenario
 class FailureScenarioResponse(BaseModel):
@@ -67,9 +68,7 @@ class FailureScenarioResponse(BaseModel):
     trigger_point: str
     severity: str
     parameters: Dict[str, Any]
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Experiment
 class ExperimentCreate(BaseModel):
@@ -90,30 +89,31 @@ class TrialResponse(BaseModel):
     failure_injected: bool
     failure_recovered: bool
     error_message: Optional[str] = None
+    source_mode: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class RunResponse(BaseModel):
     id: str
     total_trials: int
     successful_trials: int
     failed_trials: int
-    pass_rate: float
-    pass_at_k: float
-    pass_to_k: float
+    pass_rate: Optional[float] = None
+    ci_lower: Optional[float] = None
+    ci_upper: Optional[float] = None
+    pass_at_k: Optional[float] = None
+    pass_to_k: Optional[float] = None
     recovery_rate: Optional[float] = None
     avg_duration_seconds: float
+    median_duration_seconds: float = 0.0
     duration_variance: float
     avg_cost_usd: Optional[float] = None
     total_tokens: Optional[int] = None
     status: str
+    source_mode: str
     trials: List[TrialResponse] = Field(default_factory=list)
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ExperimentResponse(BaseModel):
     id: str
@@ -125,6 +125,7 @@ class ExperimentResponse(BaseModel):
     repetitions_k: int
     timeout_seconds: int
     status: str
+    source_mode: str
     is_demo: bool
     created_at: datetime
     started_at: Optional[datetime] = None
@@ -133,21 +134,20 @@ class ExperimentResponse(BaseModel):
     benchmark_task: Optional[BenchmarkTaskResponse] = None
     failure_scenario: Optional[FailureScenarioResponse] = None
     runs: List[RunResponse] = Field(default_factory=list)
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Dashboard
 class DashboardSummary(BaseModel):
     total_agents: int
     total_benchmarks: int
     total_experiments: int
-    overall_pass_rate: float
+    overall_pass_rate: Optional[float] = None
     average_duration_seconds: float
+    median_duration_seconds: float = 0.0
     average_cost_usd: Optional[float] = None
     active_environment_mode: str
+    source_mode: str = "SIMULATOR"
     harbor_status: Dict[str, Any]
     recent_experiments: List[ExperimentResponse]
     recent_failures: List[Dict[str, Any]]
     reliability_distribution: List[Dict[str, Any]]
-

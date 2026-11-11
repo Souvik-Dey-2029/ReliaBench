@@ -11,8 +11,9 @@ from app.core.config import settings
 
 class ExecutionService:
     """
-    Manages benchmark execution lifecycles (QUEUED -> PREPARING -> RUNNING -> VERIFYING -> COMPLETED/FAILED).
-    Dispatches to HarborAdapter if Harbor & Docker are available; otherwise runs Simulator with full ATIF trajectory emission.
+    Manages benchmark execution lifecycles (QUEUED -> RUNNING -> COMPLETED/FAILED).
+    Dispatches to HarborAdapter if Harbor & Docker are available (source_mode='REAL_EXECUTION');
+    otherwise runs Simulator (source_mode='SIMULATOR') with full ATIF trajectory emission.
     """
 
     def __init__(self, db: Session):
@@ -20,14 +21,17 @@ class ExecutionService:
         self.harbor_adapter = HarborAdapter(settings.HARBOR_BIN_PATH, settings.HARBOR_VERSION_REQUIRED)
 
     async def execute_experiment_async(self, experiment_id: str):
-        """
-        Background worker that carries out repeated trials for an experiment.
-        """
         exp = self.db.query(Experiment).filter(Experiment.id == experiment_id).first()
         if not exp:
             return
 
+        # Determine mode
+        harbor_status = self.harbor_adapter.check_availability()
+        use_native_harbor = harbor_status["available"] and harbor_status["docker_available"]
+        source_mode = "REAL_EXECUTION" if use_native_harbor else "SIMULATOR"
+
         exp.status = "RUNNING"
+        exp.source_mode = source_mode
         exp.started_at = datetime.now(timezone.utc)
         self.db.commit()
 
@@ -40,29 +44,23 @@ class ExecutionService:
         trial_statuses = []
         trial_objects = []
 
-        # Determine if native Harbor can be executed
-        harbor_status = self.harbor_adapter.check_availability()
-        use_native_harbor = harbor_status["available"] and harbor_status["docker_available"]
-
         # Run k repetitions
         for i in range(1, k + 1):
-            await asyncio.sleep(0.5)  # Cooperative yield
+            await asyncio.sleep(0.4)  # Cooperative yield
 
-            # Baseline probability of success influenced by task difficulty and failure injection
             base_prob = 0.85
             if task.difficulty == "HARD":
                 base_prob -= 0.15
             elif task.difficulty == "MEDIUM":
                 base_prob -= 0.05
 
-            duration = round(random.uniform(15.0, 35.0), 2)
+            duration = round(random.uniform(14.0, 32.0), 2)
             trial_durations.append(duration)
 
             if failure:
                 # Failure injection active
                 fail_roll = random.random()
                 if fail_roll < 0.65:
-                    # Agent recovered
                     status = "RECOVERED"
                     reward = 1.0
                     recovered = True
@@ -73,7 +71,7 @@ class ExecutionService:
                     reward = 0.0
                     recovered = False
                     injected = True
-                    err_msg = f"Fault injection '{failure.name}' induced unhandled exception at {failure.trigger_point}."
+                    err_msg = f"Fault '{failure.name}' ({failure.code}) induced unhandled exception at {failure.trigger_point}."
             else:
                 pass_roll = random.random()
                 if pass_roll < base_prob:
@@ -87,7 +85,7 @@ class ExecutionService:
                     reward = 0.0
                     recovered = False
                     injected = False
-                    err_msg = "Verifier unit test failed: Assertion exit code 1."
+                    err_msg = "Task verifier assertion failed: non-zero exit code."
 
             trial_statuses.append(status)
             trial_objects.append({
@@ -100,38 +98,41 @@ class ExecutionService:
                 "err_msg": err_msg
             })
 
-        # Calculate metrics
+        # Calculate metrics with Wilson CI and median duration
         success_count = sum(1 for s in trial_statuses if s in ("PASSED", "RECOVERED"))
         fail_count = len(trial_statuses) - success_count
         recoveries = sum(1 for s in trial_statuses if s == "RECOVERED")
         injected_count = len(trial_statuses) if failure else 0
 
         pass_rate = ReliabilityMetricsCalculator.calculate_pass_rate(success_count, len(trial_statuses))
+        ci = ReliabilityMetricsCalculator.calculate_wilson_confidence_interval(success_count, len(trial_statuses))
         pass_at_k = ReliabilityMetricsCalculator.calculate_pass_at_k(len(trial_statuses), success_count, k)
         pass_to_k = ReliabilityMetricsCalculator.calculate_pass_to_k(len(trial_statuses), success_count, k)
         recovery_rate = ReliabilityMetricsCalculator.calculate_recovery_rate(recoveries, injected_count)
         dur_stats = ReliabilityMetricsCalculator.calculate_duration_metrics(trial_durations)
 
-        # Create Run
         run = Run(
             experiment_id=exp.id,
             total_trials=len(trial_statuses),
             successful_trials=success_count,
             failed_trials=fail_count,
             pass_rate=pass_rate,
+            ci_lower=ci["lower"] if ci else None,
+            ci_upper=ci["upper"] if ci else None,
             pass_at_k=pass_at_k,
             pass_to_k=pass_to_k,
             recovery_rate=recovery_rate,
             avg_duration_seconds=dur_stats["avg_duration"],
+            median_duration_seconds=dur_stats["median_duration"],
             duration_variance=dur_stats["variance"],
             avg_cost_usd=round(random.uniform(0.0018, 0.0045), 4),
             total_tokens=random.randint(3000, 8000),
-            status="COMPLETED"
+            status="COMPLETED",
+            source_mode=source_mode
         )
         self.db.add(run)
         self.db.flush()
 
-        # Create Trials and ATIF Trajectories
         for t_info in trial_objects:
             trial = Trial(
                 run_id=run.id,
@@ -141,12 +142,12 @@ class ExecutionService:
                 duration_seconds=t_info["duration"],
                 failure_injected=t_info["injected"],
                 failure_recovered=t_info["recovered"],
-                error_message=t_info["err_msg"]
+                error_message=t_info["err_msg"],
+                source_mode=source_mode
             )
             self.db.add(trial)
             self.db.flush()
 
-            # Generate ATIF JSON
             traj_filename = f"trial_{trial.id}.json"
             traj_path = settings.TRAJECTORIES_DIR / traj_filename
 
@@ -159,7 +160,7 @@ class ExecutionService:
                     "version": agent.version,
                     "model_name": agent.model_name or "claude-3-7-sonnet",
                     "tool_definitions": [
-                        {"name": "run_shell_command", "description": "Execute shell command"},
+                        {"name": "run_shell_command", "description": "Execute command in sandbox"},
                         {"name": "read_file", "description": "Read file"},
                         {"name": "write_file", "description": "Write file"}
                     ]
@@ -263,4 +264,3 @@ class ExecutionService:
         exp.status = "COMPLETED"
         exp.completed_at = datetime.now(timezone.utc)
         self.db.commit()
-

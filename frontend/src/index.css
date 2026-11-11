@@ -1,56 +1,137 @@
 @import "tailwindcss";
 
-:root {
-  --bg-ink: #111318;
-  --cobalt: #427BFF;
-  --lime: #D9FF47;
-  --coral: #FF725E;
-  --violet: #7048D9;
-  --cyan: #35D5E8;
-  --white: #F7F8FA;
-  --muted: #9BA6B8;
+@layer base {
+  :root {
+    --bg-graphite: #171A16;
+    --bg-deep-ink: #10120F;
+    --color-warm-bone: #E8DDC8;
+    --color-persimmon: #F06B45;
+    --color-acid-lime: #C7D94C;
+    --color-muted-sage: #89977A;
+    --color-brass: #C49A55;
+    --color-muted-text: #A7A393;
+    --surface-card: #1D211C;
+    --surface-border: #2D332B;
+    --surface-border-subtle: #242922;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--bg-graphite);
+    color: var(--color-warm-bone);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Technical typography */
+  code, pre, .font-mono {
+    font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
 }
 
-body {
-  margin: 0;
-  background-color: var(--bg-ink);
-  color: var(--white);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Vibrant Neo-Brutalist utility classes */
-.neo-box {
-  background-color: #171A21;
-  border: 2px solid #2B313E;
-  box-shadow: 4px 4px 0px 0px #090A0D;
-}
-
-.neo-box-cobalt {
-  border: 2px solid #427BFF;
-  box-shadow: 4px 4px 0px 0px #427BFF;
-}
-
-.neo-box-lime {
-  border: 2px solid #D9FF47;
-  box-shadow: 4px 4px 0px 0px #D9FF47;
-}
-
-.neo-btn {
-  font-weight: 700;
+/* Warm Editorial & Technical Architectural Classes */
+.editorial-hero-title {
+  font-size: clamp(2.5rem, 6vw + 1rem, 5.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0.5rem 1rem;
-  border: 2px solid #000;
-  box-shadow: 3px 3px 0px 0px #000;
-  transition: all 0.1s ease;
+}
+
+.editorial-section-title {
+  font-size: clamp(1.8rem, 3.5vw, 3.2rem);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+/* Technical Panels */
+.reliabench-panel {
+  background-color: #1D211C;
+  border: 1px solid #2D332B;
+  box-shadow: 3px 3px 0px 0px #10120F;
+  transition: all 0.15s ease-out;
+}
+
+.reliabench-panel-bone {
+  background-color: #E8DDC8;
+  color: #10120F;
+  border: 2px solid #10120F;
+  box-shadow: 4px 4px 0px 0px #10120F;
+}
+
+.reliabench-panel:hover {
+  border-color: #89977A;
+}
+
+/* Actions & Buttons */
+.reliabench-btn {
+  font-weight: 800;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.65rem 1.25rem;
+  border: 1px solid #10120F;
+  box-shadow: 2px 2px 0px 0px #10120F;
+  transition: all 0.1s ease-in-out;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.neo-btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px 0px #000;
+.reliabench-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px 0px #10120F;
+}
+
+.reliabench-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px 0px #10120F;
+}
+
+.reliabench-btn-persimmon {
+  background-color: #F06B45;
+  color: #10120F;
+  border-color: #10120F;
+}
+.reliabench-btn-persimmon:hover {
+  background-color: #fa7b57;
+}
+
+.reliabench-btn-lime {
+  background-color: #C7D94C;
+  color: #10120F;
+  border-color: #10120F;
+}
+.reliabench-btn-lime:hover {
+  background-color: #d6e858;
+}
+
+.reliabench-btn-outline {
+  background-color: transparent;
+  color: #E8DDC8;
+  border: 1px solid #2D332B;
+}
+.reliabench-btn-outline:hover {
+  background-color: #242922;
+  border-color: #89977A;
+}
+
+/* Custom Scrollbar for technical panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #171A16;
+}
+::-webkit-scrollbar-thumb {
+  background: #2D332B;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #89977A;
 }

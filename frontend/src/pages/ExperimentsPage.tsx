@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { Experiment, Agent, BenchmarkTask, FailureScenario } from '../services/types';
-import { FlaskConical, Play, Plus, RefreshCw, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { FlaskConical, Play, Plus, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const ExperimentsPage: React.FC = () => {
@@ -73,62 +73,64 @@ export const ExperimentsPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center pb-6 border-b border-[#2D332B]">
         <div>
-          <h1 className="text-2xl font-black text-white flex items-center gap-2">
-            <FlaskConical size={28} className="text-[#7048D9]" />
-            <span>Benchmark Experiments & Runs</span>
+          <h1 className="text-2xl font-black text-[#E8DDC8] flex items-center gap-2">
+            <FlaskConical size={26} className="text-[#F06B45]" />
+            <span>Benchmark Experiments & Repeated Runs</span>
           </h1>
-          <p className="text-sm text-[#9BA6B8]">
+          <p className="text-xs text-[#A7A393] font-sans mt-0.5">
             Configure repeatable multi-trial evaluations ($k$ repetitions) with controlled fault injection.
           </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={loadAll}
-            className="neo-btn bg-[#1C212B] text-white hover:bg-[#252C39]"
+            className="reliabench-btn reliabench-btn-outline"
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={14} />
             <span>Refresh</span>
           </button>
           <button
             onClick={() => setShowModal(true)}
-            className="neo-btn bg-[#7048D9] text-white hover:bg-[#603cc2]"
+            className="reliabench-btn reliabench-btn-persimmon"
           >
-            <Plus size={16} />
+            <Plus size={14} />
             <span>New Experiment</span>
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="font-mono text-[#D9FF47]">[ FETCHING BENCHMARK RUNS... ]</div>
+        <div className="font-mono text-xs text-[#C7D94C]">[ FETCHING BENCHMARK RUNS... ]</div>
       ) : (
         <div className="space-y-4">
           {experiments.map((exp) => {
             const latestRun = exp.runs && exp.runs.length > 0 ? exp.runs[exp.runs.length - 1] : null;
 
             return (
-              <div key={exp.id} className="neo-box p-6">
-                <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4 mb-4 pb-4 border-b border-[#2B313E]">
+              <div key={exp.id} className="reliabench-panel p-6">
+                <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4 mb-4 pb-4 border-b border-[#2D332B]">
                   <div>
                     <div className="flex items-center gap-3 mb-1">
-                      <span className="font-black text-lg text-white">{exp.title}</span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#142B20] text-[#D9FF47] border border-[#234A35]">
+                      <span className="font-black text-base text-[#E8DDC8]">{exp.title}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#142B20] text-[#C7D94C] border border-[#234A35]">
                         {exp.status}
                       </span>
-                      {exp.is_demo && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950/40 text-amber-400 border border-amber-800">
-                          DEMO SEEDED
-                        </span>
-                      )}
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                        exp.source_mode === 'REAL_EXECUTION'
+                          ? 'bg-[#1D2B1C] text-[#C7D94C] border-[#3B5436]'
+                          : 'bg-[#2B231D] text-[#F06B45] border-[#5E3F2A]'
+                      }`}>
+                        {exp.source_mode}
+                      </span>
                     </div>
-                    <div className="text-xs font-mono text-[#9BA6B8] flex gap-4">
-                      <span>Agent: <strong className="text-[#35D5E8]">{exp.agent?.name}</strong></span>
-                      <span>Task: <strong className="text-white">{exp.benchmark_task?.name}</strong></span>
+                    <div className="text-xs font-mono text-[#89977A] flex gap-4">
+                      <span>Agent: <strong className="text-[#C49A55]">{exp.agent?.name}</strong></span>
+                      <span>Task: <strong className="text-[#E8DDC8]">{exp.benchmark_task?.name}</strong></span>
                       <span>
-                        Fault: <strong className={exp.failure_scenario ? 'text-[#FF725E]' : 'text-slate-400'}>
+                        Fault: <strong className={exp.failure_scenario ? 'text-[#F06B45]' : 'text-slate-400'}>
                           {exp.failure_scenario?.name || 'Clean Run (No Fault)'}
                         </strong>
                       </span>
@@ -139,16 +141,16 @@ export const ExperimentsPage: React.FC = () => {
                     {exp.status !== 'RUNNING' && (
                       <button
                         onClick={() => handleStart(exp.id)}
-                        className="neo-btn bg-[#D9FF47] text-black hover:bg-[#cbf536] text-xs py-1.5 px-3"
+                        className="reliabench-btn reliabench-btn-lime text-xs py-1.5 px-3"
                       >
-                        <Play size={14} />
+                        <Play size={13} />
                         <span>Re-Execute</span>
                       </button>
                     )}
                     {latestRun && (
                       <Link
-                        to={`/traces?run_id=${latestRun.id}`}
-                        className="neo-btn bg-[#35D5E8] text-black hover:bg-[#25c4d6] text-xs py-1.5 px-3"
+                        to={`/app/traces?run_id=${latestRun.id}`}
+                        className="reliabench-btn reliabench-btn-outline text-xs py-1.5 px-3"
                       >
                         Inspect ATIF Trace
                       </Link>
@@ -159,45 +161,45 @@ export const ExperimentsPage: React.FC = () => {
                 {/* Scorecard Metrics Bar */}
                 {latestRun ? (
                   <div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
-                      <div className="bg-[#111318] p-3 rounded border border-[#2B313E]">
-                        <div className="text-[10px] uppercase font-bold text-[#9BA6B8] font-mono">Pass Rate</div>
-                        <div className="text-xl font-black font-mono text-[#D9FF47]">
-                          {(latestRun.pass_rate * 100).toFixed(0)}%
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-4 font-mono">
+                      <div className="bg-[#141713] p-3 rounded border border-[#2D332B]">
+                        <div className="text-[10px] uppercase font-bold text-[#89977A]">Pass Rate</div>
+                        <div className="text-xl font-black text-[#C7D94C]">
+                          {latestRun.pass_rate !== null ? `${(latestRun.pass_rate * 100).toFixed(0)}%` : 'N/A'}
                         </div>
                       </div>
 
-                      <div className="bg-[#111318] p-3 rounded border border-[#2B313E]">
-                        <div className="text-[10px] uppercase font-bold text-[#9BA6B8] font-mono">Pass@{exp.repetitions_k}</div>
-                        <div className="text-xl font-black font-mono text-white">
-                          {(latestRun.pass_at_k * 100).toFixed(0)}%
+                      <div className="bg-[#141713] p-3 rounded border border-[#2D332B]">
+                        <div className="text-[10px] uppercase font-bold text-[#89977A]">Pass@{exp.repetitions_k}</div>
+                        <div className="text-xl font-black text-[#E8DDC8]">
+                          {latestRun.pass_at_k !== null ? `${(latestRun.pass_at_k * 100).toFixed(0)}%` : 'N/A'}
                         </div>
                       </div>
 
-                      <div className="bg-[#111318] p-3 rounded border border-[#2B313E]">
-                        <div className="text-[10px] uppercase font-bold text-[#9BA6B8] font-mono">Pass^{exp.repetitions_k} (Strict)</div>
-                        <div className="text-xl font-black font-mono text-white">
-                          {(latestRun.pass_to_k * 100).toFixed(0)}%
+                      <div className="bg-[#141713] p-3 rounded border border-[#2D332B]">
+                        <div className="text-[10px] uppercase font-bold text-[#89977A]">Pass^{exp.repetitions_k} (Strict)</div>
+                        <div className="text-xl font-black text-[#E8DDC8]">
+                          {latestRun.pass_to_k !== null ? `${(latestRun.pass_to_k * 100).toFixed(0)}%` : 'N/A'}
                         </div>
                       </div>
 
-                      <div className="bg-[#111318] p-3 rounded border border-[#2B313E]">
-                        <div className="text-[10px] uppercase font-bold text-[#9BA6B8] font-mono">Recovery Rate</div>
-                        <div className="text-xl font-black font-mono text-[#35D5E8]">
+                      <div className="bg-[#141713] p-3 rounded border border-[#2D332B]">
+                        <div className="text-[10px] uppercase font-bold text-[#89977A]">Recovery Rate</div>
+                        <div className="text-xl font-black text-[#C49A55]">
                           {latestRun.recovery_rate !== null && latestRun.recovery_rate !== undefined ? `${(latestRun.recovery_rate * 100).toFixed(0)}%` : 'N/A'}
                         </div>
                       </div>
 
-                      <div className="bg-[#111318] p-3 rounded border border-[#2B313E]">
-                        <div className="text-[10px] uppercase font-bold text-[#9BA6B8] font-mono">Mean Duration</div>
-                        <div className="text-xl font-black font-mono text-white">
+                      <div className="bg-[#141713] p-3 rounded border border-[#2D332B]">
+                        <div className="text-[10px] uppercase font-bold text-[#89977A]">Mean Duration</div>
+                        <div className="text-xl font-black text-[#E8DDC8]">
                           {latestRun.avg_duration_seconds}s
                         </div>
                       </div>
 
-                      <div className="bg-[#111318] p-3 rounded border border-[#2B313E]">
-                        <div className="text-[10px] uppercase font-bold text-[#9BA6B8] font-mono">Duration Variance</div>
-                        <div className="text-xl font-black font-mono text-slate-300">
+                      <div className="bg-[#141713] p-3 rounded border border-[#2D332B]">
+                        <div className="text-[10px] uppercase font-bold text-[#89977A]">Duration Variance</div>
+                        <div className="text-xl font-black text-[#A7A393]">
                           {latestRun.duration_variance}s²
                         </div>
                       </div>
@@ -205,7 +207,7 @@ export const ExperimentsPage: React.FC = () => {
 
                     {/* Repeated Trials Breakdown */}
                     <div className="space-y-2">
-                      <div className="text-xs font-bold uppercase text-[#9BA6B8] font-mono">
+                      <div className="text-xs font-bold uppercase text-[#89977A] font-mono">
                         Trials Iteration Breakdown (k = {exp.repetitions_k})
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -214,19 +216,19 @@ export const ExperimentsPage: React.FC = () => {
                             key={trial.id}
                             className={`p-3 rounded border text-xs font-mono flex items-center justify-between ${
                               trial.status === 'PASSED'
-                                ? 'bg-emerald-950/20 border-emerald-800 text-emerald-300'
+                                ? 'bg-[#1D2B1C] border-[#3B5436] text-[#C7D94C]'
                                 : trial.status === 'RECOVERED'
-                                ? 'bg-cyan-950/20 border-cyan-800 text-cyan-300'
-                                : 'bg-red-950/20 border-red-800 text-red-300'
+                                ? 'bg-[#292A1A] border-[#5E5A2A] text-[#C49A55]'
+                                : 'bg-[#2B1D1D] border-[#5E2A2A] text-[#FF725E]'
                             }`}
                           >
                             <div className="flex items-center gap-2">
                               {trial.status === 'PASSED' ? (
-                                <CheckCircle2 size={16} />
+                                <CheckCircle2 size={15} />
                               ) : trial.status === 'RECOVERED' ? (
-                                <CheckCircle2 size={16} />
+                                <CheckCircle2 size={15} />
                               ) : (
-                                <XCircle size={16} />
+                                <XCircle size={15} />
                               )}
                               <span>Trial #{trial.trial_number}: <strong>{trial.status}</strong></span>
                             </div>
@@ -237,7 +239,7 @@ export const ExperimentsPage: React.FC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-xs font-mono text-[#9BA6B8]">
+                  <div className="text-xs font-mono text-[#89977A]">
                     No execution trials recorded yet. Click Re-Execute to start evaluation.
                   </div>
                 )}
@@ -250,11 +252,11 @@ export const ExperimentsPage: React.FC = () => {
       {/* New Experiment Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-          <div className="neo-box bg-[#171A21] border-2 border-[#7048D9] p-6 max-w-lg w-full">
-            <h2 className="text-xl font-bold text-white mb-4">Configure Benchmark Experiment</h2>
+          <div className="reliabench-panel bg-[#1D211C] border border-[#F06B45] p-6 max-w-lg w-full">
+            <h2 className="text-lg font-bold text-[#E8DDC8] mb-4 font-mono">Configure Benchmark Experiment</h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-[#9BA6B8] mb-1">
+                <label className="block text-xs font-bold uppercase text-[#A7A393] mb-1 font-mono">
                   Experiment Title
                 </label>
                 <input
@@ -262,36 +264,36 @@ export const ExperimentsPage: React.FC = () => {
                   required
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full bg-[#111318] border border-[#2B313E] px-3 py-2 text-white font-mono text-sm rounded outline-none"
+                  className="w-full bg-[#141713] border border-[#2D332B] px-3 py-2 text-[#E8DDC8] font-mono text-xs rounded outline-none"
                   placeholder="e.g. Claude-Code: Stress Test with Tool Timeout"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-[#9BA6B8] mb-1">
+                <label className="block text-xs font-bold uppercase text-[#A7A393] mb-1 font-mono">
                   Candidate Agent
                 </label>
                 <select
                   value={form.agent_id}
                   onChange={(e) => setForm({ ...form, agent_id: e.target.value })}
-                  className="w-full bg-[#111318] border border-[#2B313E] px-3 py-2 text-white font-mono text-sm rounded"
+                  className="w-full bg-[#141713] border border-[#2D332B] px-3 py-2 text-[#E8DDC8] font-mono text-xs rounded"
                 >
                   {agents.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.name} ({a.framework} / {a.adapter_type})
+                      {a.name} ({a.framework} / {a.adapter_type}) [{a.source_mode}]
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-[#9BA6B8] mb-1">
+                <label className="block text-xs font-bold uppercase text-[#A7A393] mb-1 font-mono">
                   Benchmark Task
                 </label>
                 <select
                   value={form.benchmark_task_id}
                   onChange={(e) => setForm({ ...form, benchmark_task_id: e.target.value })}
-                  className="w-full bg-[#111318] border border-[#2B313E] px-3 py-2 text-white font-mono text-sm rounded"
+                  className="w-full bg-[#141713] border border-[#2D332B] px-3 py-2 text-[#E8DDC8] font-mono text-xs rounded"
                 >
                   {tasks.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -302,13 +304,13 @@ export const ExperimentsPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-[#9BA6B8] mb-1">
+                <label className="block text-xs font-bold uppercase text-[#A7A393] mb-1 font-mono">
                   Controlled Failure Scenario (Optional)
                 </label>
                 <select
                   value={form.failure_scenario_id}
                   onChange={(e) => setForm({ ...form, failure_scenario_id: e.target.value })}
-                  className="w-full bg-[#111318] border border-[#2B313E] px-3 py-2 text-white font-mono text-sm rounded"
+                  className="w-full bg-[#141713] border border-[#2D332B] px-3 py-2 text-[#E8DDC8] font-mono text-xs rounded"
                 >
                   <option value="">None (Clean Baseline Execution)</option>
                   {failures.map((f) => (
@@ -321,7 +323,7 @@ export const ExperimentsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-[#9BA6B8] mb-1">
+                  <label className="block text-xs font-bold uppercase text-[#A7A393] mb-1 font-mono">
                     Repetitions (k)
                   </label>
                   <input
@@ -330,12 +332,12 @@ export const ExperimentsPage: React.FC = () => {
                     max="10"
                     value={form.repetitions_k}
                     onChange={(e) => setForm({ ...form, repetitions_k: parseInt(e.target.value) || 3 })}
-                    className="w-full bg-[#111318] border border-[#2B313E] px-3 py-2 text-white font-mono text-sm rounded"
+                    className="w-full bg-[#141713] border border-[#2D332B] px-3 py-2 text-[#E8DDC8] font-mono text-xs rounded"
                   />
-                  <span className="text-[10px] text-[#9BA6B8]">Evaluates Pass@k & Pass^k</span>
+                  <span className="text-[10px] text-[#89977A]">Calculates Pass@k & Pass^k</span>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-[#9BA6B8] mb-1">
+                  <label className="block text-xs font-bold uppercase text-[#A7A393] mb-1 font-mono">
                     Timeout (Seconds)
                   </label>
                   <input
@@ -344,22 +346,22 @@ export const ExperimentsPage: React.FC = () => {
                     max="600"
                     value={form.timeout_seconds}
                     onChange={(e) => setForm({ ...form, timeout_seconds: parseInt(e.target.value) || 180 })}
-                    className="w-full bg-[#111318] border border-[#2B313E] px-3 py-2 text-white font-mono text-sm rounded"
+                    className="w-full bg-[#141713] border border-[#2D332B] px-3 py-2 text-[#E8DDC8] font-mono text-xs rounded"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-[#2B313E]">
+              <div className="flex justify-end gap-3 pt-4 border-t border-[#2D332B]">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-[#2B313E] text-sm text-[#9BA6B8] font-bold"
+                  className="px-4 py-2 border border-[#2D332B] text-xs text-[#A7A393] font-bold uppercase font-mono"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="neo-btn bg-[#7048D9] text-white hover:bg-[#603cc2]"
+                  className="reliabench-btn reliabench-btn-persimmon"
                 >
                   Launch Experiment
                 </button>

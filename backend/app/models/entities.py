@@ -21,7 +21,9 @@ class Agent(Base):
     adapter_type = Column(String(50), nullable=False, default="simulator")
     model_provider = Column(String(50), nullable=True)
     model_name = Column(String(100), nullable=True)
-    status = Column(String(30), nullable=False, default="READY")
+    endpoint_url = Column(String(255), nullable=True)
+    status = Column(String(30), nullable=False, default="CONFIGURED") # CONFIGURED, VALIDATED, AVAILABLE, UNAVAILABLE, ERROR, SIMULATOR
+    source_mode = Column(String(30), nullable=False, default="SIMULATOR") # REAL_EXECUTION, SIMULATOR
     is_demo = Column(Boolean, default=False)
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
@@ -34,14 +36,16 @@ class BenchmarkTask(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
     name = Column(String(120), nullable=False, index=True)
+    version = Column(String(20), nullable=False, default="1.0.0")
     category = Column(String(60), nullable=False, default="general")
     difficulty = Column(String(20), nullable=False, default="MEDIUM")
     description = Column(Text, nullable=False)
     instruction = Column(Text, nullable=False)
     expected_outcome = Column(Text, nullable=False)
-    verification_method = Column(String(50), nullable=False, default="ASSERTION_SCRIPT")
+    verification_method = Column(String(50), nullable=False, default="ASSERTION_SCRIPT") # ASSERTION_SCRIPT, SCRIPT_VERIFIER, FILE_STATE, STRUCTURED_OUTPUT
     time_limit_seconds = Column(Integer, default=120)
     environment_type = Column(String(50), default="DOCKER_SANDBOX")
+    source_mode = Column(String(30), nullable=False, default="SIMULATOR")
     is_demo = Column(Boolean, default=False)
     created_at = Column(DateTime, default=utc_now)
 
@@ -74,7 +78,8 @@ class Experiment(Base):
     failure_scenario_id = Column(String(36), ForeignKey("failure_scenarios.id"), nullable=True)
     repetitions_k = Column(Integer, default=3)
     timeout_seconds = Column(Integer, default=180)
-    status = Column(String(30), default="QUEUED", index=True)  # QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED
+    status = Column(String(30), default="QUEUED", index=True)  # DRAFT, QUEUED, RUNNING, COMPLETED, FAILED, CANCELLED
+    source_mode = Column(String(30), nullable=False, default="SIMULATOR") # REAL_EXECUTION, SIMULATOR
     is_demo = Column(Boolean, default=False)
     created_at = Column(DateTime, default=utc_now)
     started_at = Column(DateTime, nullable=True)
@@ -94,15 +99,19 @@ class Run(Base):
     total_trials = Column(Integer, default=0)
     successful_trials = Column(Integer, default=0)
     failed_trials = Column(Integer, default=0)
-    pass_rate = Column(Float, default=0.0)
-    pass_at_k = Column(Float, default=0.0)
-    pass_to_k = Column(Float, default=0.0)
+    pass_rate = Column(Float, nullable=True)
+    ci_lower = Column(Float, nullable=True) # Wilson score lower bound
+    ci_upper = Column(Float, nullable=True) # Wilson score upper bound
+    pass_at_k = Column(Float, nullable=True)
+    pass_to_k = Column(Float, nullable=True)
     recovery_rate = Column(Float, nullable=True)
     avg_duration_seconds = Column(Float, default=0.0)
+    median_duration_seconds = Column(Float, default=0.0)
     duration_variance = Column(Float, default=0.0)
     avg_cost_usd = Column(Float, nullable=True)
     total_tokens = Column(Integer, nullable=True)
     status = Column(String(30), default="COMPLETED")
+    source_mode = Column(String(30), nullable=False, default="SIMULATOR")
     created_at = Column(DateTime, default=utc_now)
 
     experiment = relationship("Experiment", back_populates="runs")
@@ -115,13 +124,14 @@ class Trial(Base):
     id = Column(String(36), primary_key=True, default=generate_uuid)
     run_id = Column(String(36), ForeignKey("runs.id"), nullable=False)
     trial_number = Column(Integer, nullable=False)
-    status = Column(String(30), nullable=False, default="PASSED")  # PASSED, FAILED, RECOVERED, TIMEOUT
+    status = Column(String(30), nullable=False, default="PASSED")  # PASSED, FAILED, RECOVERED, TIMEOUT, INFRASTRUCTURE_ERROR
     reward_score = Column(Float, default=1.0)
     duration_seconds = Column(Float, default=0.0)
     failure_injected = Column(Boolean, default=False)
     failure_recovered = Column(Boolean, default=False)
     error_message = Column(Text, nullable=True)
     log_file_path = Column(String(255), nullable=True)
+    source_mode = Column(String(30), nullable=False, default="SIMULATOR")
     created_at = Column(DateTime, default=utc_now)
 
     run = relationship("Run", back_populates="trials")
@@ -144,4 +154,3 @@ class Trajectory(Base):
     summary_steps = Column(JSON, default=list)
 
     trial = relationship("Trial", back_populates="trajectory")
-
