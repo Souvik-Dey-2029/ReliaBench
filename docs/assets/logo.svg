@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <defs>
+    <linearGradient id="logoBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F06B45"/>
+      <stop offset="100%" stop-color="#D9532B"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="32" fill="#141713" stroke="#2D332B" stroke-width="4"/>
+  <rect x="25" y="25" width="110" height="110" rx="22" fill="url(#logoBg)" stroke="#10120F" stroke-width="4" filter="drop-shadow(6px 6px 0px #10120F)"/>
+  
+  <!-- Stylized R lettermark -->
+  <path d="M50 48 L88 48 C100 48 108 55 108 67 C108 79 98 85 86 85 L68 85 L68 112 L50 112 Z M68 64 L68 70 L84 70 C90 70 93 68 93 64 C93 60 90 58 84 58 L68 58 Z" fill="#10120F"/>
+  <path d="M80 82 L106 112 L87 112 L65 85 Z" fill="#10120F"/>
+
+  <!-- Live Pulse Point -->
+  <circle cx="122" cy="38" r="8" fill="#C7D94C" stroke="#10120F" stroke-width="3"/>
+</svg>
