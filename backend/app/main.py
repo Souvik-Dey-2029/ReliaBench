@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.db.session import engine, Base, SessionLocal
 from app.services.demo_seed import seed_demo_data_if_empty
 from app.api.routes.api_v1 import router as api_v1_router
+from app.api.routes.reliability import router as reliability_router
 
 # Initialize database schema
 Base.metadata.create_all(bind=engine)
@@ -30,6 +31,8 @@ app.add_middleware(
 )
 
 app.include_router(api_v1_router, prefix=settings.API_V1_PREFIX)
+app.include_router(reliability_router, prefix=settings.API_V1_PREFIX)
+
 
 @app.get("/")
 def root():
