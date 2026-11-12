@@ -46,3 +46,6 @@ class ATIFTrajectoryPayload(BaseModel):
     notes: Optional[str] = None
     final_metrics: Optional[Dict[str, Any]] = None
 
+ATIFTrajectory = ATIFTrajectoryPayload
+
+
