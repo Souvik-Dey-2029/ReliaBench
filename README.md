@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/banner.svg" alt="ReliaBench Header Banner" width="100%" style="border-radius: 12px;"/>
+  <img src="docs/assets/banner.png" alt="ReliaBench Header Banner" width="100%" style="border-radius: 12px;"/>
 
   <br/><br/>
 
@@ -21,6 +21,7 @@
     <a href="#-about-the-project">About</a> •
     <a href="#-ps02-hackathon-context">PS02 Context</a> •
     <a href="#-the-headline-contrast-proof">Headline Contrast</a> •
+    <a href="#-mathematical-rigor--statistical-foundations">Mathematical Rigor</a> •
     <a href="#-interactive-dashboard-tour">UI Tour</a> •
     <a href="#-architecture--flow">Architecture</a> •
     <a href="#-key-capabilities">Capabilities</a> •
@@ -32,7 +33,7 @@
 
   <br/>
 
-  <img src="docs/assets/dashboard_preview.svg" alt="ReliaBench Operational Dashboard Preview" width="100%" style="border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.85);"/>
+  <img src="docs/assets/dashboard_preview.png" alt="ReliaBench Operational Dashboard Preview" width="100%" style="border-radius: 12px; box-shadow: 0 16px 48px rgba(0,0,0,0.85);"/>
 </div>
 
 ---
@@ -66,7 +67,7 @@ Under identical seed (`42`) and identical fault injection (`TOOL_ERROR` at step 
 - The **`resilient`** agent detects the error, executes an automated retry with exponential backoff, recovers the step, and delivers a **100% pass rate** ($Pass^k = 1.0$).
 
 <div align="center">
-  <img src="docs/assets/backend_cli_preview.svg" alt="ReliaBench Backend CLI Live Proof" width="100%" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.8);"/>
+  <img src="docs/assets/backend_cli_preview.png" alt="ReliaBench Backend CLI Live Proof" width="100%" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.8);"/>
 </div>
 
 ### Reproduction Command:
@@ -92,6 +93,36 @@ print('RESILIENT:', {'pass_rate': sc_r.pass_rate, 'taxonomy': sc_r.taxonomy_coun
 
 ---
 
+# ✦ Mathematical Rigor & Statistical Foundations
+
+ReliaBench does not approximate metrics using heuristic averages or ungrounded scores. Every execution is evaluated against formal mathematical definitions:
+
+<div align="center">
+  <img src="docs/assets/math_foundations.png" alt="ReliaBench Mathematical Foundations & Invariants" width="100%" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.8);"/>
+</div>
+
+### 1. Wilson 95% Score Confidence Interval
+When measuring binomial proportions under small sample sizes ($k \le 10$), standard normal approximations exceed the $[0, 1]$ interval. ReliaBench applies the **Wilson score interval**:
+$$w = \frac{\hat{p} + \frac{z^2}{2k} \pm z \sqrt{\frac{\hat{p}(1-\hat{p})}{k} + \frac{z^2}{4k^2}}}{1 + \frac{z^2}{k}}, \quad z = 1.95996$$
+This produces rigorous lower and upper uncertainty bounds without boundary distortions.
+
+### 2. Pass@k Unbiased Estimator
+Calculates the probability that an agent succeeds at least once in $k$ attempts:
+$$Pass@k = 1.0 - \frac{\binom{n - c}{k}}{\binom{n}{k}}$$
+Where $n$ is total trials evaluated, $c$ is successful trials, and $k$ is the sample window.
+
+### 3. Pass^k Consecutive Reliability (tau-bench Formulation)
+Calculates the probability that an agent succeeds across **all $k$ consecutive attempts**:
+$$Pass^k = \frac{\binom{c}{k}}{\binom{n}{k}} \le Pass@k$$
+**Invariant**: ReliaBench enforces that $Pass^k$ must never exceed $Pass@k$.
+
+### 4. Deterministic Seeded Fault Invariant
+Every fault decision is an exact mathematical projection:
+$$\text{Decision} = \text{PRNG}\left(\text{seed} \parallel \text{step\_index} \parallel \text{tool} \parallel \text{kind}\right) \le \text{probability}$$
+Zero calls to unseeded random generators ensure that regression replays reproduce failing steps with 100% precision.
+
+---
+
 # ✦ Interactive Dashboard Tour
 
 | Screen | View Name | Key Interactive Functionality |
@@ -104,7 +135,7 @@ print('RESILIENT:', {'pass_rate': sc_r.pass_rate, 'taxonomy': sc_r.taxonomy_coun
 
 ---
 
-# ✦ Architecture & Flow
+# ✦ System Architecture & Flow
 
 ```mermaid
 flowchart TD
@@ -154,19 +185,7 @@ Challenge packs declare tools, execution steps, expected outcomes, and step-leve
 - `pandas_aggregation`: Out-of-core pipeline chunking to eliminate memory exhaustion.
 - `sql_model_refactor`: Query explain analyze and index optimization.
 
-### 2. Zero-Randomness Seeded Fault Engine (`backend/app/faults/`)
-Every fault injection decision is a pure mathematical function of:
-$$\text{Decision} = \text{PRNG}\left(\text{seed} \parallel \text{step\_index} \parallel \text{tool} \parallel \text{kind}\right) \le \text{probability}$$
-Zero calls to unseeded random generators ensure that regression replays reproduce failing steps with 100% precision.
-
-### 3. Mathematical Evaluation ($Pass^k \le Pass@k$)
-- **Pass Rate**: Standard success fraction accompanied by a **Wilson 95% Confidence Interval** ($[lower, upper]$).
-- **$Pass@k$**: Probability that at least one of $k$ independent attempts succeeds:
-  $$Pass@k = 1 - \frac{\binom{n-c}{k}}{\binom{n}{k}}$$
-- **$Pass^k$** (tau-bench research model): Fraction of runs where all $k$ consecutive trials succeed without fault breakdown:
-  $$Pass^k = \frac{\binom{c}{k}}{\binom{n}{k}} \le Pass@k$$
-
-### 4. Hierarchical Failure Taxonomy
+### 2. Hierarchical Failure Taxonomy
 When an agent fails, root causes are evaluated in strict priority order:
 1. `TIMEOUT`: Execution exceeded wall-clock budget.
 2. `PLANNING_DEVIATION`: Step precondition (`requires`) was broken or skipped.
@@ -174,6 +193,9 @@ When an agent fails, root causes are evaluated in strict priority order:
 4. `RECOVERY_EXHAUSTED`: Retries exhausted without step recovery.
 5. `TOOL_CONTRACT` / `MODEL_OUTAGE` / `INSTRUCTION_CONFLICT`: Specific fault caused unhandled termination.
 6. `UNKNOWN`: Unclassified error.
+
+### 3. Regression Gates & CI Replay
+Promote any failure into a permanent regression case. Replay individual cases or bulk trigger `/api/v1/regressions/run-all` to ensure hardened agents report `FIXED` before merge.
 
 ---
 
