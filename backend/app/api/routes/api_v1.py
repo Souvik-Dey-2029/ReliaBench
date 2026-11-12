@@ -26,15 +26,30 @@ router = APIRouter()
 def health_check():
     harbor_ad = HarborAdapter(settings.HARBOR_BIN_PATH, settings.HARBOR_VERSION_REQUIRED)
     bifrost_ad = BifrostAdapter()
+    harbor_info = harbor_ad.check_availability()
+    bifrost_info = bifrost_ad.get_status()
+
+    # Determine active source mode
+    if harbor_info.get("available") and harbor_info.get("docker_available"):
+        active_mode = "REAL_EXECUTION"
+    else:
+        active_mode = "DETERMINISTIC_HARNESS"
+
+    from app.benchmarks.pack import list_packs
+    packs = list_packs()
+
     return {
         "status": "healthy",
         "version": "0.1.0",
         "database": "connected",
+        "active_source_mode": active_mode,
+        "pack_count": len(packs),
         "adapters": {
-            "harbor": harbor_ad.check_availability(),
-            "bifrost": bifrost_ad.get_status()
-        }
+            "harbor": harbor_info,
+            "bifrost": bifrost_info,
+        },
     }
+
 
 @router.get("/dashboard/summary", response_model=DashboardSummary)
 def get_dashboard_summary(source_mode: Optional[str] = Query(None), db: Session = Depends(get_db)):
