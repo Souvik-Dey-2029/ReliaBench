@@ -9,14 +9,17 @@ import {
   Activity,
   FileText,
   Settings,
-  ArrowLeft
+  ArrowLeft,
+  ShieldAlert
 } from 'lucide-react';
+
 
 const navItems = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/app/agents', label: 'Agent Registry', icon: Bot },
   { to: '/app/benchmarks', label: 'Benchmark Library', icon: Layers },
   { to: '/app/experiments', label: 'Experiments & Runs', icon: FlaskConical },
+  { to: '/app/regressions', label: 'Regression Gates', icon: ShieldAlert },
   { to: '/app/comparison', label: 'Agent Comparison', icon: GitCompare },
   { to: '/app/traces', label: 'Trace Explorer (ATIF)', icon: Activity },
   { to: '/app/reports', label: 'Reports & Export', icon: FileText },
