@@ -1,0 +1,51 @@
+id: flaky_test_triage
+name: Flaky Test Triage and Quarantine
+category: software_engineering
+difficulty: medium
+instruction: Analyze the failing CI logs, identify the flaky test candidate, and update the quarantine configuration.
+expected_outcome: Flaky test identified and quarantined without breaking build pipeline.
+time_limit_seconds: 60
+tags:
+  - testing
+  - triage
+  - ci-cd
+tools:
+  - name: read_ci_logs
+    description: Fetch recent CI failure logs.
+    latency_ms: 100
+  - name: git_blame
+    description: Inspect recent commits touching test files.
+    latency_ms: 80
+  - name: update_quarantine_config
+    description: Write quarantine rule into quarantine.yaml.
+    latency_ms: 120
+plan:
+  - id: step_1
+    thought: Retrieve the latest CI build log to locate failures.
+    tool: read_ci_logs
+    args:
+      build_id: "build_8472"
+    observation: "Found intermittent failure in test_session_expiry: assertion error 200 != 500"
+    requires: null
+  - id: step_2
+    thought: Check git blame for recent modifications to test_session_expiry.
+    tool: git_blame
+    args:
+      file: "tests/test_session.py"
+    observation: "Commit 9ab21: added race condition in session expiry timer"
+    requires: "Found intermittent failure in test_session_expiry"
+  - id: step_3
+    thought: Quarantine the test to prevent blocked master branch merges.
+    tool: update_quarantine_config
+    args:
+      test_name: "test_session_expiry"
+      action: "quarantine"
+    observation: "Quarantine rule added for test_session_expiry"
+    requires: "Commit 9ab21"
+validators:
+  - type: tool_called
+    tool: update_quarantine_config
+  - type: min_steps
+    value: 3
+  - type: observation_contains
+    value: "Quarantine rule added"

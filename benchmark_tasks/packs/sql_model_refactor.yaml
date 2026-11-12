@@ -1,0 +1,49 @@
+id: sql_model_refactor
+name: SQL Query Index Optimization
+category: database
+difficulty: medium
+instruction: Analyze slow query log for table scans and apply appropriate compound indexes.
+expected_outcome: Sequential scan eliminated, query latency drops under 10ms.
+time_limit_seconds: 60
+tags:
+  - sql
+  - database
+  - performance
+tools:
+  - name: explain_analyze_query
+    description: Run EXPLAIN ANALYZE on slow query.
+    latency_ms: 100
+  - name: create_compound_index
+    description: Issue DDL migration to create covering index.
+    latency_ms: 180
+  - name: retest_query_plan
+    description: Check plan after index creation.
+    latency_ms: 100
+plan:
+  - id: step_1
+    thought: Analyze execution plan for order lookup query.
+    tool: explain_analyze_query
+    args:
+      query_id: "q_orders_by_tenant_date"
+    observation: "Seq Scan on orders (cost=0.00..8450.20 rows=100 width=64) (actual time=124.5ms)"
+    requires: null
+  - id: step_2
+    thought: Add compound index on (tenant_id, created_at DESC).
+    tool: create_compound_index
+    args:
+      table: "orders"
+      columns: ["tenant_id", "created_at"]
+    observation: "Index idx_orders_tenant_date created successfully"
+    requires: "Seq Scan on orders"
+  - id: step_3
+    thought: Re-run explain analyze to confirm index scan.
+    tool: retest_query_plan
+    args:
+      query_id: "q_orders_by_tenant_date"
+    observation: "Index Scan using idx_orders_tenant_date (actual time=2.1ms)"
+    requires: "Index idx_orders_tenant_date created successfully"
+validators:
+  - type: tool_called
+    tool: create_compound_index
+  - type: observation_contains
+    value: "Index Scan using idx_orders_tenant_date"
