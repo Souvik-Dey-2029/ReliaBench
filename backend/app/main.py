@@ -2,12 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.session import engine, Base, SessionLocal
+from app.db.migrations import run_additive_migrations
 from app.services.demo_seed import seed_demo_data_if_empty
 from app.api.routes.api_v1 import router as api_v1_router
 from app.api.routes.reliability import router as reliability_router
 
-# Initialize database schema
+# Initialize database schema and run additive migrations
 Base.metadata.create_all(bind=engine)
+run_additive_migrations(engine)
 
 # Seed demo data if database is brand new
 with SessionLocal() as db:
