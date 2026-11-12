@@ -1,7 +1,11 @@
 <div align="center">
-  <img src="docs/assets/banner.png" alt="ReliaBench Header Banner & Brand Emblem" width="100%" style="border-radius: 14px; box-shadow: 0 16px 48px rgba(240, 107, 69, 0.15);"/>
+  <img src="docs/assets/hero_banner.png" alt="ReliaBench Header Banner & Brand Emblem" width="100%" style="border-radius: 14px; box-shadow: 0 16px 48px rgba(240, 107, 69, 0.2);"/>
 
   <br/><br/>
+
+  <p align="center">
+    <img src="docs/assets/brand_emblem.png" alt="ReliaBench R Emblem" width="100" height="100" style="border-radius: 20px; filter: drop-shadow(0 10px 20px rgba(240, 107, 69, 0.35));"/>
+  </p>
 
   # RELIABENCH
   ### "AgentClash and friends are run orchestrators with replay. ReliaBench is a reliability harness that deliberately breaks the environment and reports pass^k under fault, with gateway-level cost attribution."
