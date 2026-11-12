@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 480" width="100%" height="100%">
+  <defs>
+    <linearGradient id="mathBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141713"/>
+      <stop offset="100%" stop-color="#1B1F19"/>
+    </linearGradient>
+  </defs>
+  <rect width="920" height="480" rx="12" fill="url(#mathBg)" stroke="#2D332B" stroke-width="2"/>
+  <rect width="920" height="38" rx="12" fill="#111410" stroke="#2D332B" stroke-width="1"/>
+  <circle cx="24" cy="19" r="6" fill="#FF725E"/>
+  <circle cx="44" cy="19" r="6" fill="#C49A55"/>
+  <circle cx="64" cy="19" r="6" fill="#C7D94C"/>
+  <text x="460" y="24" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="12" fill="#89977A">reliabench-evaluation-engine · rigorous-mathematical-foundations</text>
+
+  <!-- 4 Mathematical Pillars -->
+  <g transform="translate(30, 60)">
+    <!-- Formula 1: Wilson Score Interval -->
+    <rect width="410" height="180" rx="8" fill="#171B16" stroke="#3B5436" stroke-width="1.5"/>
+    <text x="20" y="30" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="bold" fill="#C7D94C">1. WILSON 95% CONFIDENCE INTERVAL</text>
+    <text x="20" y="52" font-family="'Inter', sans-serif" font-size="11" fill="#A7A393">Asymmetric binomial interval handling small samples (k &lt;= 10):</text>
+    <rect x="20" y="65" width="370" height="70" rx="6" fill="#0E110D" stroke="#232821"/>
+    <text x="35" y="98" font-family="'JetBrains Mono', monospace" font-size="12" fill="#E8DDC8">w = (p + z^2 / 2k +- z * S) / (1 + z^2 / k)</text>
+    <text x="35" y="120" font-family="'JetBrains Mono', monospace" font-size="11" fill="#89977A">where S = sqrt(p(1-p)/k + z^2 / 4k^2), z = 1.95996</text>
+    <text x="20" y="160" font-family="'JetBrains Mono', monospace" font-size="10" fill="#C7D94C">Guarantees [lower, upper] strictly within [0.0, 1.0]</text>
+
+    <!-- Formula 2: Pass@k Unbiased Estimator -->
+    <rect x="440" width="420" height="180" rx="8" fill="#171B16" stroke="#2D332B" stroke-width="1.5"/>
+    <text x="460" y="30" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="bold" fill="#E8DDC8">2. PASS@k (Probability &gt;= 1 Success)</text>
+    <text x="460" y="52" font-family="'Inter', sans-serif" font-size="11" fill="#A7A393">Unbiased hypergeometric probability of at least 1 success:</text>
+    <rect x="460" y="65" width="380" height="70" rx="6" fill="#0E110D" stroke="#232821"/>
+    <text x="475" y="105" font-family="'JetBrains Mono', monospace" font-size="14" fill="#C7D94C">Pass@k = 1.0 - [ C(n - c, k) / C(n, k) ]</text>
+    <text x="460" y="160" font-family="'JetBrains Mono', monospace" font-size="10" fill="#89977A">n = total trials, c = successes, k = evaluated sample</text>
+
+    <!-- Formula 3: Pass^k Consecutive Reliability -->
+    <rect y="200" width="410" height="180" rx="8" fill="#171B16" stroke="#5E3F2A" stroke-width="1.5"/>
+    <text x="20" y="230" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="bold" fill="#F06B45">3. PASS^k (tau-bench Consecutive Metric)</text>
+    <text x="20" y="252" font-family="'Inter', sans-serif" font-size="11" fill="#A7A393">Fraction of trials where ALL k consecutive attempts succeed:</text>
+    <rect x="20" y="265" width="370" height="70" rx="6" fill="#0E110D" stroke="#232821"/>
+    <text x="35" y="305" font-family="'JetBrains Mono', monospace" font-size="14" fill="#FF725E">Pass^k = C(c, k) / C(n, k)  &lt;=  Pass@k</text>
+    <text x="20" y="360" font-family="'JetBrains Mono', monospace" font-size="10" fill="#FF725E">Non-negotiable invariant: Pass^k must never exceed Pass@k</text>
+
+    <!-- Formula 4: Deterministic Seeded Fault Invariant -->
+    <rect x="440" y="200" width="420" height="180" rx="8" fill="#171B16" stroke="#5E5A2A" stroke-width="1.5"/>
+    <text x="460" y="230" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="bold" fill="#C49A55">4. SEEDED FAULT DECISION INVARIANT</text>
+    <text x="460" y="252" font-family="'Inter', sans-serif" font-size="11" fill="#A7A393">Zero-randomness pure function keyed on exact tuple:</text>
+    <rect x="460" y="265" width="380" height="70" rx="6" fill="#0E110D" stroke="#232821"/>
+    <text x="475" y="300" font-family="'JetBrains Mono', monospace" font-size="12" fill="#C49A55">f(seed, step, tool, kind) = PRNG(hash) &lt;= P(fault)</text>
+    <text x="475" y="322" font-family="'JetBrains Mono', monospace" font-size="11" fill="#89977A">hash = "{seed}|{step_index}|{tool}|{kind}"</text>
+    <text x="460" y="360" font-family="'JetBrains Mono', monospace" font-size="10" fill="#C49A55">100% exact reproduction across CLI, CI, and UI replays</text>
+  </g>
+</svg>

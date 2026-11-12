@@ -186,20 +186,50 @@ def validate_agent(agent_id: str, db: Session = Depends(get_db)):
     agent = db.query(Agent).filter(Agent.id == agent_id).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
-    
+
+    from app.adapters.agents.real_adapters import HttpAgentAdapter, CliAgentAdapter
+
     # Check adapter connectivity
-    if agent.adapter_type == "simulator":
-        agent.status = "VALIDATED"
+    if agent.adapter_type == "http" and agent.endpoint_url:
+        adapter = HttpAgentAdapter(endpoint_url=agent.endpoint_url)
+        probe_res = adapter.probe()
+        agent.status = probe_res.status
+        db.commit()
+        db.refresh(agent)
+        return {
+            "message": probe_res.message,
+            "status": probe_res.status,
+            "latency_ms": probe_res.latency_ms,
+            "details": probe_res.details,
+        }
+    elif agent.adapter_type == "cli" and agent.endpoint_url:
+        adapter = CliAgentAdapter(command_path=agent.endpoint_url)
+        probe_res = adapter.probe()
+        agent.status = probe_res.status
+        db.commit()
+        db.refresh(agent)
+        return {
+            "message": probe_res.message,
+            "status": probe_res.status,
+            "latency_ms": probe_res.latency_ms,
+            "details": probe_res.details,
+        }
     elif agent.adapter_type == "harbor_cli":
         harbor_ad = HarborAdapter(settings.HARBOR_BIN_PATH, settings.HARBOR_VERSION_REQUIRED)
         avail = harbor_ad.check_availability()
         agent.status = "AVAILABLE" if (avail["available"] and avail["docker_available"]) else "UNAVAILABLE"
+        db.commit()
+        db.refresh(agent)
+        return {
+            "message": f"Harbor availability check: {avail['status']}",
+            "status": agent.status,
+            "details": avail,
+        }
     else:
         agent.status = "VALIDATED"
-
-    db.commit()
-    db.refresh(agent)
-    return {"message": "Agent validation complete", "status": agent.status}
+        db.commit()
+        db.refresh(agent)
+        return {"message": "Agent validation complete", "status": agent.status}
 
 @router.put("/agents/{agent_id}", response_model=AgentResponse)
 def update_agent(agent_id: str, agent_in: AgentUpdate, db: Session = Depends(get_db)):
