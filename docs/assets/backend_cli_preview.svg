@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 460" width="100%" height="100%">
+  <defs>
+    <linearGradient id="termBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F120E"/>
+      <stop offset="100%" stop-color="#151A14"/>
+    </linearGradient>
+  </defs>
+  <rect width="920" height="460" rx="12" fill="url(#termBg)" stroke="#2D332B" stroke-width="2"/>
+  
+  <!-- Terminal Top Bar -->
+  <rect width="920" height="38" rx="12" fill="#121611" stroke="#2D332B" stroke-width="1"/>
+  <circle cx="24" cy="19" r="6" fill="#FF725E"/>
+  <circle cx="44" cy="19" r="6" fill="#C49A55"/>
+  <circle cx="64" cy="19" r="6" fill="#C7D94C"/>
+  <text x="460" y="24" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="12" fill="#89977A">reliabench-cli-runner · deterministic-reliability-harness</text>
+
+  <!-- Terminal Content -->
+  <g transform="translate(30, 65)" font-family="'JetBrains Mono', monospace" font-size="12">
+    <text y="0" fill="#89977A"># 1. RUNNING FRAGILE AGENT UNDER STEP-3 TOOL INJECTION (SEED 42)</text>
+    <text y="22" fill="#F06B45">$ python -m app.services.runner --pack flaky_test_triage --profile fragile --fault TOOL_ERROR --step 3</text>
+    
+    <text y="48" fill="#E8DDC8">[INFO] Loaded Challenge Pack: <tspan fill="#C7D94C">flaky_test_triage</tspan> (3 steps, 3 tools, 3 validators)</text>
+    <text y="68" fill="#E8DDC8">[STEP 1] read_ci_logs -> <tspan fill="#C7D94C">"Intermittent failure in test_session_expiry"</tspan> (is_error=False)</text>
+    <text y="88" fill="#E8DDC8">[STEP 2] git_blame -> <tspan fill="#C7D94C">"Commit 9ab21: added race condition"</tspan> (is_error=False, requires_verified=True)</text>
+    <text y="108" fill="#FF725E">[STEP 3] update_quarantine_config -> [INJECTED FAULT] ToolContractViolation: exit code 1</text>
+    <text y="128" fill="#FF725E">[CRASH] Fragile agent has 0 retries. Trial terminated.</text>
+    <text y="150" fill="#A7A393">SCORECARD: <tspan fill="#FF725E">Pass Rate: 0.0%</tspan> | Wilson CI: [0.00 - 0.56] | Recovery: 0.0% | Taxonomy: <tspan fill="#FF725E">TOOL_CONTRACT (3 trials)</tspan></text>
+
+    <!-- Divider Line -->
+    <line x1="0" y1="175" x2="860" y2="175" stroke="#2D332B" stroke-width="1.5" stroke-dasharray="4"/>
+
+    <text y="205" fill="#89977A"># 2. RUNNING RESILIENT AGENT UNDER IDENTICAL SEED AND FAULT</text>
+    <text y="227" fill="#F06B45">$ python -m app.services.runner --pack flaky_test_triage --profile resilient --fault TOOL_ERROR --step 3</text>
+
+    <text y="253" fill="#E8DDC8">[INFO] Running with identical seed=42 and step 3 fault configuration</text>
+    <text y="273" fill="#E8DDC8">[STEP 3] update_quarantine_config -> [FAULT DETECTED] Retrying with exponential backoff (attempt 2/3)</text>
+    <text y="293" fill="#C7D94C">[RECOVERED] Tool executed successfully: "Quarantine rule added for test_session_expiry"</text>
+    <text y="313" fill="#E8DDC8">[VALIDATORS] All 3 task validators satisfied (tool_called, min_steps=3, observation_contains)</text>
+    <text y="335" fill="#C7D94C">SCORECARD: <tspan fill="#C7D94C" font-weight="bold">Pass Rate: 100.0%</tspan> | Pass@k: 1.00 | Pass^k: 1.00 | Recovery Rate: 100.0% | Category: CLEAN</text>
+    <text y="355" fill="#C49A55">[BIFROST] Gateway Cost Attribution: $0.00162 USD | Total Tokens: 720 | Latency: 210ms</text>
+  </g>
+</svg>
