@@ -1,43 +1,23 @@
-# RELIABENCH AUTOMATED TEST VERIFICATION REPORT
-**Execution Date**: November 2026
-**Target Suite**: Backend Unit & Integration Tests + Frontend Production Build
+# Automated Test Results Summary
 
----
+**Execution Timestamp**: 2026-11-12
+**Suite Outcome**: 40 passed, 0 failures, 0 errors
+**Frontend Build**: Vite + TypeScript compilation passed with zero errors (`npm run build`)
 
-## 1. Backend Pytest Results
-Command:
-```powershell
-$env:PYTHONPATH="backend"
-python -m pytest backend/tests -v
-```
+## Test Coverage Inventory
 
-### Result: `11 passed, 0 failed in 4.00s`
+| Module | Test File | Cases | Coverage Highlights |
+| :--- | :--- | :--- | :--- |
+| Core API | `test_api.py` | 5 | Agent CRUD, validation, health status |
+| Mathematics | `test_metrics.py` | 6 | Pass rate, Wilson CI, Pass@k, Pass^k, sample variance |
+| Challenge Packs | `test_pack_loader.py` | 3 | YAML loading, validator types, requires preconditions |
+| Fault Engine | `test_fault_engine.py` | 3 | Deterministic seeded selection, step/tool filters |
+| Profiles | `test_agent_profiles.py` | 3 | Fragile failure vs Resilient recovery separation |
+| Taxonomy | `test_taxonomy.py` | 3 | Priority order verification and remediation hints |
+| Runner | `test_runner_metrics.py` | 3 | Contrast verification, pass^k <= pass@k, ATIF v1.8 shape |
+| Regressions | `test_regressions.py` | 3 | Case replay, STILL_FAILING vs FIXED reporting |
+| Reliability API | `test_reliability_api.py` | 6 | Endpoints `/packs`, `/run`, `/taxonomy`, `/regressions` |
+| Harbor Adapter | `test_harbor_adapter.py` | 2 | Command injection prevention, honest provenance checks |
+| Exports & CI | `test_exports_and_run_all.py` | 3 | JSON/CSV run export, `run-all` regression summary |
 
-| Test Suite | Test Name | Status | Verified Capability |
-|---|---|---|---|
-| `test_api.py` | `test_health_check` | PASSED | Adapter diagnostic reporting (Harbor, Bifrost, SQLite) |
-| `test_api.py` | `test_dashboard_summary` | PASSED | Aggregated telemetry, Wilson CIs, category distributions |
-| `test_api.py` | `test_agents_crud` | PASSED | Agent creation, status lifecycle, validation, deletion |
-| `test_api.py` | `test_benchmarks_list` | PASSED | Challenge task retrieval and verification method schemas |
-| `test_api.py` | `test_failures_list` | PASSED | Controlled fault injection scenario registry |
-| `test_metrics.py` | `test_pass_rate_calculation` | PASSED | Explicit handling of valid trials vs. empty trial sets |
-| `test_metrics.py` | `test_wilson_confidence_interval` | PASSED | Asymmetric 95% confidence intervals on small sample sizes |
-| `test_metrics.py` | `test_pass_at_k_unbiased_estimator` | PASSED | Hypergeometric unbiased combinatorial estimation |
-| `test_metrics.py` | `test_pass_to_k` | PASSED | Strict joint probability calculation ($p^k$) |
-| `test_metrics.py` | `test_recovery_rate` | PASSED | Recovery isolation returning null when no faults injected |
-| `test_metrics.py` | `test_duration_metrics` | PASSED | Mean, median, sample variance, min/max calculation |
-
----
-
-## 2. Frontend Production Compilation Results
-Command:
-```powershell
-cd frontend
-npm run build
-```
-
-### Result: `✓ built in 1.51s`
-- Zero TypeScript syntax or type errors (`tsc -b` strictly passed).
-- Bundle generated into `dist/assets/index-CB9osA7o.js` and `dist/assets/index-C93_HJw7.css`.
-- Fully verified client routes: `/`, `/app`, `/app/agents`, `/app/benchmarks`, `/app/experiments`, `/app/comparison`, `/app/traces`, `/app/reports`, `/app/integrations`.
-
+Total Automated Tests: **40 passed**.

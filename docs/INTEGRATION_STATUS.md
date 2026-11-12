@@ -1,19 +1,14 @@
-# RELIABENCH INTEGRATION STATUS MATRIX
+# Integration Status & Dependency Audit
 
-This document continuously tracks the operational readiness and verification state of external dependencies and integration adapters.
+## Execution Sandboxing
+- **Harbor (`v0.25.0`)**: Checked via `/api/v1/health`.
+  - When installed with Docker daemon active: runs tasks with `REAL_EXECUTION` provenance badge.
+  - When Harbor or Docker is absent: gracefully degrades to `DETERMINISTIC_HARNESS` or `SIMULATOR` fallback. Zero synthetic data is labeled `REAL_EXECUTION`.
 
-| Adapter / Component | Status | Required Version | Verified Interface | Fallback Mode |
-|---|---|---|---|---|
-| **Harbor Execution Adapter** | `DEMO/SIMULATOR READY` | `v0.25.0` | CLI Subprocess (`harbor run -p <task> -a <agent>`) | Simulator Adapter with deterministic ATIF trajectories |
-| **Docker Sandbox** | `UNAVAILABLE (HOST)` | Any standard daemon | Local named pipe / socket | In-memory simulated execution container |
-| **ATIF Trajectory Normalizer** | `ACTIVE` | `ATIF-v1.8` | JSON Specification Parser & Renderer | Fully compatible |
-| **Bifrost Gateway** | `PENDING / OPTIONAL` | Latest | OpenAI API endpoint proxy | Pass-through / Direct provider mock |
-| **SQLite Storage** | `ACTIVE` | Built-in | SQLAlchemy ORM | Default local relational storage |
-| **Local Artifact Storage** | `ACTIVE` | OS Filesystem | `artifacts/{trajectories,logs,reports}` | File-based persistence |
+## Model Gateway
+- **Maxim Bifrost**: Checked via `/api/v1/health`.
+  - When enabled: routes OpenAI-compatible chat requests through the gateway endpoint.
+  - When disabled or unreachable: falls back cleanly to local stub client with explicit `mode="MOCK"` and `fallback_used=True`.
 
----
-
-### Harbor Adapter Diagnostic Notes
-- When `harbor` CLI is found in `$PATH` and Docker daemon is running, Reliabench issues sandboxed `harbor run` executions.
-- When `harbor` is not installed or Docker is not active, Reliabench activates the **Simulator Runner**, which creates realistic, mathematically consistent execution trials, failure injections, recoveries, and ATIF v1.8 trajectory artifacts. The UI prominently displays the badge **`SIMULATOR MODE`** so users and evaluators never mistake synthetic runs for hardware-isolated container runs.
-
+## Trace Storage & Formats
+- **ATIF v1.8**: Harbor-compatible trajectory schema stored at `artifacts/trajectories/*.json` and served dynamically via `/api/v1/runs/{id}/trajectory`.
