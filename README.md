@@ -1,17 +1,17 @@
 <div align="center">
-  <img src="docs/assets/banner.svg" alt="ReliaBench Banner" width="100%" style="border-radius: 12px;"/>
+  <img src="docs/assets/banner.svg" alt="ReliaBench Header Banner" width="100%" style="border-radius: 12px;"/>
 
   <br/><br/>
 
   # RELIABENCH
   ### "AgentClash and friends are run orchestrators with replay. ReliaBench is a reliability harness that deliberately breaks the environment and reports pass^k under fault, with gateway-level cost attribution."
 
-  **A framework-independent benchmarking and reliability harness built for the Global AI Hackathon (Geek Room) · Problem Statement PS02: "Build a Benchmarking Platform for AI Agents, Not Just Models".**
+  **A framework-independent benchmarking and reliability platform engineered for the Global AI Hackathon (Geek Room) · Problem Statement PS02: "Build a Benchmarking Platform for AI Agents, Not Just Models".**
 
   <p>
-    <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/Backend-FastAPI%20%7C%20Python%203.13-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/></a>
-    <a href="https://react.dev/"><img src="https://img.shields.io/badge/Frontend-React%2018%20%7C%20Vite%208-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React"/></a>
-    <a href="https://github.com/harbor-framework/harbor"><img src="https://img.shields.io/badge/Execution-Harbor%20v0.25.0%20Sandbox-FF725E?style=for-the-badge&logo=docker&logoColor=white" alt="Harbor"/></a>
+    <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-Python%203.13-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/></a>
+    <a href="https://react.dev/"><img src="https://img.shields.io/badge/React%2018-Vite%208%20%7C%20Tailwind%20v4-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React"/></a>
+    <a href="https://github.com/harbor-framework/harbor"><img src="https://img.shields.io/badge/Sandbox-Harbor%20v0.25.0%20Docker-FF725E?style=for-the-badge&logo=docker&logoColor=white" alt="Harbor"/></a>
     <a href="https://www.maxim.ai/"><img src="https://img.shields.io/badge/Gateway-Maxim%20Bifrost%20Telemetry-C7D94C?style=for-the-badge&logoColor=black" alt="Bifrost"/></a>
     <a href="https://pytest.org/"><img src="https://img.shields.io/badge/Tests-44%20Passing%20Tests-brightgreen?style=for-the-badge&logo=pytest" alt="Pytest"/></a>
     <img src="https://img.shields.io/badge/Format-ATIF%20v1.8%20Traces-orange?style=for-the-badge" alt="ATIF"/>
@@ -19,10 +19,11 @@
 
   <p>
     <a href="#-about-the-project">About</a> •
-    <a href="#-the-core-problem-ps02-context">PS02 Context</a> •
+    <a href="#-ps02-hackathon-context">PS02 Context</a> •
     <a href="#-the-headline-contrast-proof">Headline Contrast</a> •
+    <a href="#-interactive-dashboard-tour">UI Tour</a> •
     <a href="#-architecture--flow">Architecture</a> •
-    <a href="#-key-capabilities">Key Capabilities</a> •
+    <a href="#-key-capabilities">Capabilities</a> •
     <a href="#-provenance-modes">Provenance</a> •
     <a href="#-quick-start">Quick Start</a> •
     <a href="#-reuse-map">Reuse Map</a> •
@@ -44,7 +45,7 @@ ReliaBench introduces **deliberate, deterministic fault injection** combined wit
 
 ---
 
-# ✦ The Core Problem (PS02 Context)
+# ✦ PS02 Hackathon Context
 
 Problem statement **PS02** tasks engineers with building a platform that evaluates AI agents—not just isolated foundation models.
 
@@ -64,6 +65,11 @@ Under identical seed (`42`) and identical fault injection (`TOOL_ERROR` at step 
 - The **`fragile`** agent crashes immediately, recording a **0.0% pass rate** and a **`TOOL_CONTRACT`** taxonomy classification.
 - The **`resilient`** agent detects the error, executes an automated retry with exponential backoff, recovers the step, and delivers a **100% pass rate** ($Pass^k = 1.0$).
 
+<div align="center">
+  <img src="docs/assets/backend_cli_preview.svg" alt="ReliaBench Backend CLI Live Proof" width="100%" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.8);"/>
+</div>
+
+### Reproduction Command:
 ```bash
 PYTHONPATH=backend python -c "
 from app.benchmarks.pack import load_pack_from_file
@@ -84,15 +90,21 @@ print('RESILIENT:', {'pass_rate': sc_r.pass_rate, 'taxonomy': sc_r.taxonomy_coun
 "
 ```
 
-### Verified Terminal Output:
-```text
-FRAGILE:   {'pass_rate': 0.0, 'taxonomy': {'TOOL_CONTRACT': 3}, 'recovery_rate': 0.0}
-RESILIENT: {'pass_rate': 1.0, 'taxonomy': {}, 'recovery_rate': 1.0}
-```
+---
+
+# ✦ Interactive Dashboard Tour
+
+| Screen | View Name | Key Interactive Functionality |
+| :--- | :--- | :--- |
+| **01. Operational Workspace** | `DashboardPage.tsx` | Overview of platform pass rates, $Pass^k$ distribution, active provenance mode toggle (`ALL` / `REAL_EXECUTION` / `SIMULATOR`), and recent failure feed. |
+| **02. Challenge Library** | `BenchmarksPage.tsx` | Full catalog of challenge packs, reference plans with step preconditions (`requires`), and live fault injection launcher. |
+| **03. Trace Inspector** | `TracesPage.tsx` | Step-by-step ATIF v1.8 waterfall scrubber highlighting injected tool faults, thoughts, function calls, and per-step token/cost attribution. |
+| **04. Agent Matrix** | `ComparisonsPage.tsx` | Side-by-side comparative analysis of candidate agents under identical conditions, with cross-condition compatibility warning banners. |
+| **05. Regression Gates** | `RegressionsPage.tsx` | Quarantine registry with one-click individual replay and bulk CI test execution reporting `FIXED` vs `STILL_FAILING`. |
 
 ---
 
-# ✦ System Architecture & Flow
+# ✦ Architecture & Flow
 
 ```mermaid
 flowchart TD
@@ -162,9 +174,6 @@ When an agent fails, root causes are evaluated in strict priority order:
 4. `RECOVERY_EXHAUSTED`: Retries exhausted without step recovery.
 5. `TOOL_CONTRACT` / `MODEL_OUTAGE` / `INSTRUCTION_CONFLICT`: Specific fault caused unhandled termination.
 6. `UNKNOWN`: Unclassified error.
-
-### 5. Regression Gates & CI Replay
-Promote any failure into a permanent regression case. Replay individual cases or bulk trigger `/api/v1/regressions/run-all` to ensure hardened agents report `FIXED` before merge.
 
 ---
 
