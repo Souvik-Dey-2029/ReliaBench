@@ -8,27 +8,29 @@
 
   **A framework-independent benchmarking and reliability platform engineered for the Global AI Hackathon (Geek Room) · Problem Statement PS02: "Build a Benchmarking Platform for AI Agents, Not Just Models".**
 
+  <br/>
+
   <p>
-    <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-Python%203.13-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/></a>
-    <a href="https://react.dev/"><img src="https://img.shields.io/badge/React%2018-Vite%208%20%7C%20Tailwind%20v4-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React"/></a>
-    <a href="https://github.com/harbor-framework/harbor"><img src="https://img.shields.io/badge/Sandbox-Harbor%20v0.25.0%20Docker-FF725E?style=for-the-badge&logo=docker&logoColor=white" alt="Harbor"/></a>
-    <a href="https://www.maxim.ai/"><img src="https://img.shields.io/badge/Gateway-Maxim%20Bifrost%20Telemetry-C7D94C?style=for-the-badge&logoColor=black" alt="Bifrost"/></a>
-    <a href="https://pytest.org/"><img src="https://img.shields.io/badge/Tests-44%20Passing%20Tests-brightgreen?style=for-the-badge&logo=pytest" alt="Pytest"/></a>
-    <img src="https://img.shields.io/badge/Format-ATIF%20v1.8%20Traces-orange?style=for-the-badge" alt="ATIF"/>
+    <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FASTAPI-PYTHON%203.13-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/></a>
+    <a href="https://react.dev/"><img src="https://img.shields.io/badge/REACT%2018-VITE%208%20%7C%20TAILWIND%20V4-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React"/></a>
+    <a href="https://github.com/harbor-framework/harbor"><img src="https://img.shields.io/badge/SANDBOX-HARBOR%20V0.25.0%20DOCKER-FF725E?style=for-the-badge&logo=docker&logoColor=white" alt="Harbor"/></a>
+    <a href="https://www.maxim.ai/"><img src="https://img.shields.io/badge/GATEWAY-MAXIM%20BIFROST%20TELEMETRY-C7D94C?style=for-the-badge&logoColor=black" alt="Bifrost"/></a>
+    <a href="https://pytest.org/"><img src="https://img.shields.io/badge/TESTS-44%20PASSING%20(100%25)-brightgreen?style=for-the-badge&logo=pytest" alt="Pytest"/></a>
+    <img src="https://img.shields.io/badge/FORMAT-ATIF%20V1.8%20TRACES-orange?style=for-the-badge" alt="ATIF"/>
   </p>
 
   <p>
-    <a href="#-about-the-project">About</a> •
-    <a href="#-ps02-hackathon-context">PS02 Context</a> •
-    <a href="#-the-headline-contrast-proof">Headline Contrast</a> •
-    <a href="#-mathematical-rigor--statistical-foundations">Mathematical Rigor</a> •
-    <a href="#-interactive-dashboard-tour">UI Tour</a> •
-    <a href="#-architecture--flow">Architecture</a> •
-    <a href="#-key-capabilities">Capabilities</a> •
-    <a href="#-provenance-modes">Provenance</a> •
-    <a href="#-quick-start">Quick Start</a> •
-    <a href="#-reuse-map">Reuse Map</a> •
-    <a href="#-team-workstreams">Team</a>
+    <a href="#about-the-project">About</a> •
+    <a href="#ps02-hackathon-context">PS02 Context</a> •
+    <a href="#the-headline-contrast-proof">Headline Contrast</a> •
+    <a href="#mathematical-rigor--statistical-foundations">Mathematical Rigor</a> •
+    <a href="#interactive-dashboard-tour">UI Tour</a> •
+    <a href="#system-architecture--flow">Architecture</a> •
+    <a href="#key-capabilities">Capabilities</a> •
+    <a href="#provenance-modes-zero-fabricated-data">Provenance</a> •
+    <a href="#quick-start">Quick Start</a> •
+    <a href="#reuse-map--attributions">Reuse Map</a> •
+    <a href="#team-reliabench-workstreams">Team</a>
   </p>
 
   <br/>
@@ -38,7 +40,7 @@
 
 ---
 
-# ✦ About the Project
+# About the Project
 
 **ReliaBench** is a framework-independent reliability harness designed to test, break, evaluate, and certify autonomous AI agents before production deployment. While traditional benchmarks measure single-turn accuracy on curated question-answer datasets, real-world agent deployments face stochastic tool dropouts, 5xx model provider outages, rate-limit backoffs, and adversarial prompt injections.
 
@@ -46,11 +48,11 @@ ReliaBench introduces **deliberate, deterministic fault injection** combined wit
 
 ---
 
-# ✦ PS02 Hackathon Context
+# PS02 Hackathon Context
 
 Problem statement **PS02** tasks engineers with building a platform that evaluates AI agents—not just isolated foundation models.
 
-> **Our Defence**: Evaluating an agent solely on happy-path success rates ($Pass@1$) provides an illusion of safety. If an agent executes a workflow once and passes, that single run is not reliability. Production systems require multi-trial repeatability under controlled disruption.
+> **Our Thesis**: Evaluating an agent solely on happy-path success rates ($Pass@1$) provides an illusion of safety. If an agent executes a workflow once and passes, that single run is not reliability. Production systems require multi-trial repeatability under controlled disruption.
 
 ### Why Existing Orchestrators Fall Short:
 1. **Happy-Path Bias**: Testing without faults tells you nothing about an agent's recovery loops or failure handling.
@@ -60,7 +62,7 @@ Problem statement **PS02** tasks engineers with building a platform that evaluat
 
 ---
 
-# ✦ The Headline Contrast (Proof in 1 Command)
+# The Headline Contrast (Proof in 1 Command)
 
 Under identical seed (`42`) and identical fault injection (`TOOL_ERROR` at step 3 on the `flaky_test_triage` challenge pack):
 - The **`fragile`** agent crashes immediately, recording a **0.0% pass rate** and a **`TOOL_CONTRACT`** taxonomy classification.
@@ -93,7 +95,7 @@ print('RESILIENT:', {'pass_rate': sc_r.pass_rate, 'taxonomy': sc_r.taxonomy_coun
 
 ---
 
-# ✦ Mathematical Rigor & Statistical Foundations
+# Mathematical Rigor & Statistical Foundations
 
 ReliaBench does not approximate metrics using heuristic averages or ungrounded scores. Every execution is evaluated against formal mathematical definitions:
 
@@ -123,7 +125,7 @@ Zero calls to unseeded random generators ensure that regression replays reproduc
 
 ---
 
-# ✦ Interactive Dashboard Tour
+# Interactive Dashboard Tour
 
 | Screen | View Name | Key Interactive Functionality |
 | :--- | :--- | :--- |
@@ -135,36 +137,40 @@ Zero calls to unseeded random generators ensure that regression replays reproduc
 
 ---
 
-# ✦ System Architecture & Flow
+# System Architecture & Flow
+
+<div align="center">
+  <img src="docs/assets/system_architecture.png" alt="ReliaBench System Architecture Pipeline" width="100%" style="border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,0.8);"/>
+</div>
 
 ```mermaid
 flowchart TD
     subgraph Challenge["1. Challenge Specification"]
-        P[📦 Challenge Pack YAML] --> PC[🔗 Precondition Chain 'requires']
-        P --> V[✅ Verifiers & Target Assertions]
+        P["Challenge Pack YAML"] --> PC["Precondition Chain 'requires'"]
+        P --> V["Verifiers & Target Assertions"]
     end
 
     subgraph Fault["2. Deterministic Fault Engine"]
-        F1[Seed PRNG] --> FI{Inject Decision?}
-        FI -- TOOL_ERROR --> D1[💥 500 Exit Code]
-        FI -- TOOL_TIMEOUT --> D2[⏱️ 30s Gateway Timeout]
-        FI -- MODEL_UNAVAILABLE --> D3[🔌 503 Provider Outage]
-        FI -- MISLEADING_INSTRUCTION --> D4[🛡️ Prompt Injection]
+        F1["Seed PRNG"] --> FI{"Inject Decision?"}
+        FI -- TOOL_ERROR --> D1["500 Internal Error"]
+        FI -- TOOL_TIMEOUT --> D2["30s Gateway Timeout"]
+        FI -- MODEL_UNAVAILABLE --> D3["503 Provider Outage"]
+        FI -- MISLEADING_INSTRUCTION --> D4["Adversarial Prompt Injection"]
     end
 
     subgraph Adapters["3. Execution Adapters"]
-        A1[⚡ Reference Tool Agents]
-        A2[🌐 Real HTTP REST Agents]
-        A3[💻 CLI Subprocess Agents]
-        A4[🐳 Harbor v0.25.0 Docker Sandbox]
+        A1["Reference Tool Agents (Fragile / Retrying / Resilient)"]
+        A2["Real HTTP REST Agents"]
+        A3["CLI Subprocess Agents"]
+        A4["Harbor v0.25.0 Docker Sandbox"]
     end
 
     subgraph Evaluation["4. Evaluation & Observability"]
-        E1[📊 Wilson 95% Score CI]
-        E2[📐 Pass@k vs Pass^k]
-        E3[🏷️ Hierarchical Failure Taxonomy]
-        E4[🛰️ ATIF v1.8 Trace Exporter]
-        E5[💰 Bifrost Gateway Cost Attribution]
+        E1["Wilson 95% Score CI"]
+        E2["Pass@k vs Pass^k"]
+        E3["Hierarchical Failure Taxonomy"]
+        E4["ATIF v1.8 Trace Exporter"]
+        E5["Bifrost Gateway Cost Attribution"]
     end
 
     Challenge --> Adapters
@@ -174,7 +180,7 @@ flowchart TD
 
 ---
 
-# ✦ Key Capabilities
+# Key Capabilities
 
 ### 1. Challenge Packs with Precondition Chains (`benchmark_tasks/packs/`)
 Challenge packs declare tools, execution steps, expected outcomes, and step-level `requires` preconditions:
@@ -199,7 +205,7 @@ Promote any failure into a permanent regression case. Replay individual cases or
 
 ---
 
-# ✦ Provenance Modes (Zero Fabricated Data)
+# Provenance Modes (Zero Fabricated Data)
 
 Every run, trial, and scorecard carries an explicit `source_mode`:
 
@@ -211,7 +217,7 @@ Every run, trial, and scorecard carries an explicit `source_mode`:
 
 ---
 
-# ✦ Quick Start
+# Quick Start
 
 ### 1. Backend (FastAPI + Uvicorn)
 ```bash
@@ -243,7 +249,7 @@ docker compose up --build -d
 
 ---
 
-# ✦ Automated Test Suite (44 Tests Passing)
+# Automated Test Suite (44 Tests Passing)
 
 ```bash
 # Run backend pytest suite
@@ -261,7 +267,7 @@ cd frontend && npm run build
 
 ---
 
-# ✦ Reuse Map & Attributions
+# Reuse Map & Attributions
 
 | Project | License | What We Reused | What We Built |
 | :--- | :---: | :--- | :--- |
@@ -272,7 +278,7 @@ cd frontend && npm run build
 
 ---
 
-# ✦ Team ReliaBench Workstreams
+# Team ReliaBench Workstreams
 
 - **Souvik Dey**: Project Architecture, Frontend Design Language, Agent Adapter Interface, Reference Profiles.
 - **Mohit Raj**: Benchmark Engine & Evaluation, Seeded Fault Injection, Mathematical Metrics ($Pass^k$), Regression Replay.
