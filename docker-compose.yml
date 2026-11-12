@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: reliabench-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app/backend
+      - PROJECT_NAME=Reliabench
+      - DATABASE_URL=sqlite:///./reliabench.db
+      - HARBOR_BIN_PATH=harbor
+      - ENABLE_BIFROST_GATEWAY=False
+    restart: unless-stopped
+    volumes:
+      - ./benchmark_tasks:/app/benchmark_tasks
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: reliabench-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
