@@ -3,6 +3,12 @@
 
   <br/><br/>
 
+  <a href="https://github.com/mohitraj8503/ReliaBench">
+    <img src="docs/assets/logo.png" alt="ReliaBench Brand Logo" width="120" height="120" style="border-radius: 24px; filter: drop-shadow(0 12px 24px rgba(240, 107, 69, 0.35));"/>
+  </a>
+
+  <br/><br/>
+
   # RELIABENCH
   ### "AgentClash and friends are run orchestrators with replay. ReliaBench is a reliability harness that deliberately breaks the environment and reports pass^k under fault, with gateway-level cost attribution."
 
