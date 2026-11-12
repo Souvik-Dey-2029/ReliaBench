@@ -81,6 +81,28 @@ RESILIENT: {'pass_rate': 1.0, 'taxonomy': {}, 'recovery': 1.0}
 
 ---
 
+## Clean-State Architecture & Demo Data Policy
+
+ReliaBench ships in an **operational clean state**:
+- Fresh installations start with **0 registered agents, 0 experiments, 0 runs, and 0 trajectories**.
+- **System capabilities remain fully functional**: All challenge packs (`/api/v1/packs`), failure scenario definitions (`/api/v1/failures`), deterministic fault engines, reference profiles (`fragile`, `retrying`, `resilient`), and the failure taxonomy are available immediately upon launch.
+- No fabricated leaderboard entries or pre-seeded showcase results are displayed.
+- The trial matrix on the landing page is explicitly labeled as an **illustrative simulator model**, not experimental benchmark results.
+
+### CLI Data Cleanup Tool
+
+To clean any demo or test data created during development and return the system to an empty production-like state:
+
+```bash
+# Preview what records would be cleaned
+PYTHONPATH=backend python -m app.cli clean-demo-data --dry-run
+
+# Execute full cleanup (removes demo DB records and synthetic trajectory files)
+PYTHONPATH=backend python -m app.cli clean-demo-data
+```
+
+---
+
 ## Provenance Modes
 
 Data honesty is non-negotiable in ReliaBench. Every scorecard, trial, and frontend view explicitly badges provenance:
@@ -112,7 +134,7 @@ Data honesty is non-negotiable in ReliaBench. Every scorecard, trial, and fronte
 ReliaBench is validated with automated test suites across backend and frontend:
 
 ```bash
-# Backend pytest suite (40 tests)
+# Backend pytest suite (41 tests)
 PYTHONPATH=backend python -m pytest backend/tests -v
 
 # Frontend TypeScript and production bundle check
