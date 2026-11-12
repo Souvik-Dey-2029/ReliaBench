@@ -1,0 +1,25 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Reverse Proxy API requests to backend daemon (Uvicorn running on localhost:8000)
+  # If mod_proxy is enabled on Hostinger Web App / VPS:
+  <IfModule mod_proxy.c>
+    RewriteRule ^api/(.*)$ http://127.0.0.1:8000/api/$1 [P,L]
+    RewriteRule ^docs(.*)$ http://127.0.0.1:8000/docs$1 [P,L]
+    RewriteRule ^openapi.json$ http://127.0.0.1:8000/openapi.json [P,L]
+  </IfModule>
+
+  # 2. Single Page Application (SPA) routing for React / Vite
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Security Headers & Caching
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set X-XSS-Protection "1; mode=block"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
