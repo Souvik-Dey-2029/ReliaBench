@@ -1,0 +1,48 @@
+id: pandas_aggregation
+name: Pandas Pipeline Out-of-Core Aggregation
+category: data_engineering
+difficulty: medium
+instruction: Optimize large CSV data processing pipeline using chunked iterators to prevent OOM errors.
+expected_outcome: Chunking applied, peak memory usage drops below 512MB.
+time_limit_seconds: 60
+tags:
+  - data
+  - python
+  - optimization
+tools:
+  - name: profile_memory
+    description: Profile memory allocation of current pipeline.
+    latency_ms: 120
+  - name: rewrite_chunked_pipeline
+    description: Rewrite read_csv with chunksize and generator reduction.
+    latency_ms: 150
+  - name: execute_benchmark
+    description: Execute pipeline under memory cgroup constraints.
+    latency_ms: 200
+plan:
+  - id: step_1
+    thought: Profile memory usage on 2GB dataset.
+    tool: profile_memory
+    args:
+      dataset: "large_events.csv"
+    observation: "Pipeline consumed 4.1GB RAM, triggering OOM killer"
+    requires: null
+  - id: step_2
+    thought: Refactor script to use chunksize=50000 and running aggregations.
+    tool: rewrite_chunked_pipeline
+    args:
+      chunk_size: 50000
+    observation: "Pipeline rewritten with streaming accumulator"
+    requires: "Pipeline consumed 4.1GB RAM"
+  - id: step_3
+    thought: Benchmark updated pipeline under 512MB RAM limit.
+    tool: execute_benchmark
+    args:
+      limit_mb: 512
+    observation: "Pipeline completed successfully with peak memory 210MB"
+    requires: "Pipeline rewritten with streaming accumulator"
+validators:
+  - type: tool_called
+    tool: rewrite_chunked_pipeline
+  - type: observation_contains
+    value: "peak memory 210MB"

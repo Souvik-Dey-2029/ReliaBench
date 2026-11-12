@@ -26,15 +26,30 @@ router = APIRouter()
 def health_check():
     harbor_ad = HarborAdapter(settings.HARBOR_BIN_PATH, settings.HARBOR_VERSION_REQUIRED)
     bifrost_ad = BifrostAdapter()
+    harbor_info = harbor_ad.check_availability()
+    bifrost_info = bifrost_ad.get_status()
+
+    # Determine active source mode
+    if harbor_info.get("available") and harbor_info.get("docker_available"):
+        active_mode = "REAL_EXECUTION"
+    else:
+        active_mode = "DETERMINISTIC_HARNESS"
+
+    from app.benchmarks.pack import list_packs
+    packs = list_packs()
+
     return {
         "status": "healthy",
         "version": "0.1.0",
         "database": "connected",
+        "active_source_mode": active_mode,
+        "pack_count": len(packs),
         "adapters": {
-            "harbor": harbor_ad.check_availability(),
-            "bifrost": bifrost_ad.get_status()
-        }
+            "harbor": harbor_info,
+            "bifrost": bifrost_info,
+        },
     }
+
 
 @router.get("/dashboard/summary", response_model=DashboardSummary)
 def get_dashboard_summary(source_mode: Optional[str] = Query(None), db: Session = Depends(get_db)):
@@ -284,6 +299,90 @@ def get_run(run_id: str, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
     return run
+
+
+@router.get("/runs/{run_id}/export")
+def export_run_scorecard(
+    run_id: str,
+    format: str = Query("json", pattern="^(json|csv)$"),
+    db: Session = Depends(get_db),
+):
+    """Full scorecard export with metrics, per-trial outcomes, taxonomy, and provenance."""
+    import csv
+    import io
+    from fastapi.responses import Response
+
+    run = db.query(Run).filter(Run.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    trials_data = []
+    for t in run.trials:
+        trials_data.append({
+            "trial_id": t.id,
+            "trial_number": t.trial_number,
+            "status": t.status,
+            "reward_score": t.reward_score,
+            "duration_seconds": t.duration_seconds,
+            "failure_injected": t.failure_injected,
+            "failure_recovered": t.failure_recovered,
+            "error_message": t.error_message or "",
+            "source_mode": t.source_mode,
+        })
+
+    if format == "csv":
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            "run_id",
+            "trial_number",
+            "status",
+            "reward_score",
+            "duration_seconds",
+            "failure_injected",
+            "failure_recovered",
+            "error_message",
+            "source_mode",
+        ])
+        for td in trials_data:
+            writer.writerow([
+                run.id,
+                td["trial_number"],
+                td["status"],
+                td["reward_score"],
+                td["duration_seconds"],
+                td["failure_injected"],
+                td["failure_recovered"],
+                td["error_message"],
+                td["source_mode"],
+            ])
+        return Response(
+            content=output.getvalue(),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=run_{run_id}.csv"},
+        )
+
+    return {
+        "run_id": run.id,
+        "experiment_id": run.experiment_id,
+        "status": run.status,
+        "source_mode": run.source_mode,
+        "total_trials": run.total_trials,
+        "successful_trials": run.successful_trials,
+        "failed_trials": run.failed_trials,
+        "pass_rate": run.pass_rate,
+        "ci_lower": run.ci_lower,
+        "ci_upper": run.ci_upper,
+        "pass_at_k": run.pass_at_k,
+        "pass_to_k": run.pass_to_k,
+        "recovery_rate": run.recovery_rate,
+        "avg_duration_seconds": run.avg_duration_seconds,
+        "median_duration_seconds": run.median_duration_seconds,
+        "avg_cost_usd": run.avg_cost_usd,
+        "total_tokens": run.total_tokens,
+        "trials": trials_data,
+    }
+
 
 @router.get("/runs/{run_id}/trajectory")
 def get_run_trajectory(run_id: str, db: Session = Depends(get_db)):

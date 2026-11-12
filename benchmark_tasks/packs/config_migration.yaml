@@ -1,0 +1,47 @@
+id: config_migration
+name: Service Configuration Migration
+category: devops
+difficulty: easy
+instruction: Migrate legacy environment variables to unified hierarchical YAML configuration.
+expected_outcome: Config migrated and validated against schema.
+time_limit_seconds: 45
+tags:
+  - devops
+  - config
+tools:
+  - name: read_env_file
+    description: Read legacy .env file.
+    latency_ms: 50
+  - name: generate_yaml_config
+    description: Transform flat env to structured yaml.
+    latency_ms: 70
+  - name: validate_config_schema
+    description: Validate generated config against JSON Schema.
+    latency_ms: 90
+plan:
+  - id: step_1
+    thought: Parse legacy environment definitions.
+    tool: read_env_file
+    args:
+      path: ".env.legacy"
+    observation: "Loaded 24 keys from legacy env"
+    requires: null
+  - id: step_2
+    thought: Map keys into hierarchical YAML tree.
+    tool: generate_yaml_config
+    args:
+      format: "yaml"
+    observation: "Generated config.yaml with database and server sections"
+    requires: "Loaded 24 keys"
+  - id: step_3
+    thought: Validate configuration against standard schema.
+    tool: validate_config_schema
+    args:
+      schema: "config.schema.json"
+    observation: "Schema validation passed with 0 errors"
+    requires: "Generated config.yaml"
+validators:
+  - type: observation_contains
+    value: "Schema validation passed"
+  - type: min_steps
+    value: 3

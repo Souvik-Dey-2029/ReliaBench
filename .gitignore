@@ -41,3 +41,5 @@ artifacts/reports/*
 # Environment
 .env
 
+.venv/
+artifacts/trajectories/*.json

@@ -139,3 +139,25 @@ class ReliabilityMetricsCalculator:
             "max": round(max(durations), 2),
             "samples": count
         }
+
+
+def calculate_pass_at_k(n: int, c: int, k: int) -> float:
+    val = ReliabilityMetricsCalculator.calculate_pass_at_k(n, c, k)
+    return val if val is not None else 0.0
+
+
+def calculate_pass_pow_k(successes_list: List[int], k: int) -> float:
+    """Calculates pass^k (fraction of runs/trials where all k passed or p^k)."""
+    if not successes_list or k <= 0:
+        return 0.0
+    c = successes_list[0] if isinstance(successes_list, list) else int(successes_list)
+    val = ReliabilityMetricsCalculator.calculate_pass_to_k(k, c, k)
+    return val if val is not None else 0.0
+
+
+def wilson_score_interval(successes: int, total: int) -> Tuple[float, float]:
+    res = ReliabilityMetricsCalculator.calculate_wilson_confidence_interval(successes, total)
+    if not res:
+        return (0.0, 1.0)
+    return (res["lower"], res["upper"])
+

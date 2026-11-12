@@ -1,0 +1,49 @@
+id: rate_limit_backoff
+name: API Rate Limit Backoff Handler
+category: infrastructure
+difficulty: hard
+instruction: Detect HTTP 429 responses and implement exponential backoff with jitter in the API client.
+expected_outcome: Client retries respect retry-after header and succeed without dropping payloads.
+time_limit_seconds: 90
+tags:
+  - networking
+  - reliability
+  - retry
+tools:
+  - name: inspect_endpoint_metrics
+    description: Inspect request rates and error codes.
+    latency_ms: 150
+  - name: patch_client_retry_policy
+    description: Update client retry loop with jitter.
+    latency_ms: 100
+  - name: verify_synthetic_load
+    description: Send test requests to verify backoff compliance.
+    latency_ms: 200
+plan:
+  - id: step_1
+    thought: Check recent status code distribution on API gateway.
+    tool: inspect_endpoint_metrics
+    args:
+      service: "payment_gateway"
+    observation: "429 Too Many Requests detected, spikes during top-of-minute"
+    requires: null
+  - id: step_2
+    thought: Patch client to respect Retry-After header with exponential backoff.
+    tool: patch_client_retry_policy
+    args:
+      strategy: "exponential_jitter"
+      max_retries: 3
+    observation: "Retry policy updated in client library"
+    requires: "429 Too Many Requests detected"
+  - id: step_3
+    thought: Verify synthetic requests successfully back off and recover.
+    tool: verify_synthetic_load
+    args:
+      concurrency: 50
+    observation: "All 50 requests completed successfully after backoff"
+    requires: "Retry policy updated"
+validators:
+  - type: tool_called
+    tool: patch_client_retry_policy
+  - type: observation_contains
+    value: "completed successfully after backoff"

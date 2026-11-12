@@ -130,5 +130,70 @@ export const api = {
     const res = await fetch(`${API_BASE}/comparisons?experiment_ids=${experimentIds.join(',')}`);
     if (!res.ok) throw new Error('Failed to fetch comparisons');
     return res.json();
+  },
+
+  // Reliability Core Endpoints
+  async getPacks(): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/packs`);
+    if (!res.ok) throw new Error('Failed to fetch packs');
+    return res.json();
+  },
+
+  async getPack(packId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/packs/${packId}`);
+    if (!res.ok) throw new Error(`Failed to fetch pack ${packId}`);
+    return res.json();
+  },
+
+  async runPack(packId: string, payload: {
+    profile: string;
+    k: number;
+    seed: number;
+    fault_kind?: string;
+    at_step?: number;
+    tool?: string;
+    probability?: number;
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE}/packs/${packId}/run`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Failed to run challenge pack');
+    }
+    return res.json();
+  },
+
+  async getTaxonomy(): Promise<any> {
+    const res = await fetch(`${API_BASE}/taxonomy`);
+    if (!res.ok) throw new Error('Failed to fetch failure taxonomy');
+    return res.json();
+  },
+
+  async getRegressions(): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/regressions`);
+    if (!res.ok) throw new Error('Failed to fetch regression gates');
+    return res.json();
+  },
+
+  async replayRegression(caseId: string, runnerAgent?: string): Promise<any> {
+    const url = runnerAgent
+      ? `${API_BASE}/regressions/${caseId}/replay?runner_agent=${runnerAgent}`
+      : `${API_BASE}/regressions/${caseId}/replay`;
+    const res = await fetch(url, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to replay regression case');
+    return res.json();
+  },
+
+  async replayAllRegressions(targetAgent?: string): Promise<any> {
+    const url = targetAgent
+      ? `${API_BASE}/regressions/run-all?target_agent=${targetAgent}`
+      : `${API_BASE}/regressions/run-all`;
+    const res = await fetch(url, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to replay all regressions');
+    return res.json();
   }
 };
+

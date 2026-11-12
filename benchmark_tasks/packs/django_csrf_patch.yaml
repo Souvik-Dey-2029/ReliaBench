@@ -1,0 +1,47 @@
+id: django_csrf_patch
+name: Django CSRF Security Patch
+category: security
+difficulty: medium
+instruction: Patch vulnerable CSRF exemption in authentication webhook handler.
+expected_outcome: Webhook verifies CSRF token or uses secure HMAC signature.
+time_limit_seconds: 60
+tags:
+  - security
+  - django
+tools:
+  - name: grep_codebase
+    description: Search for @csrf_exempt decorators.
+    latency_ms: 100
+  - name: apply_signature_auth
+    description: Add HMAC-SHA256 signature verification decorator.
+    latency_ms: 120
+  - name: run_security_tests
+    description: Run security test suite.
+    latency_ms: 180
+plan:
+  - id: step_1
+    thought: Search for unsafe csrf exemptions in webhook views.
+    tool: grep_codebase
+    args:
+      pattern: "@csrf_exempt"
+    observation: "Found @csrf_exempt on StripeWebhookView in views/webhooks.py"
+    requires: null
+  - id: step_2
+    thought: Replace csrf_exempt with HMAC signature verification.
+    tool: apply_signature_auth
+    args:
+      view: "StripeWebhookView"
+    observation: "HMAC signature verification decorator applied"
+    requires: "Found @csrf_exempt on StripeWebhookView"
+  - id: step_3
+    thought: Run test suite to verify attack vectors are blocked.
+    tool: run_security_tests
+    args:
+      target: "test_webhooks.py"
+    observation: "Security suite passed: forged requests rejected with 403"
+    requires: "HMAC signature verification decorator applied"
+validators:
+  - type: tool_called
+    tool: apply_signature_auth
+  - type: observation_contains
+    value: "Security suite passed"
