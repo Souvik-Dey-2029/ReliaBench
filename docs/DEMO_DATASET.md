@@ -75,3 +75,4 @@ $$\text{Pass}^k = \frac{\binom{c}{k}}{\binom{n}{k}}$$
 ### E. Recovery Rate
 For trials with injected faults ($F_{\text{injected}}$):
 $$\text{Recovery Rate} = \frac{\sum \mathbb{I}(\text{status} = \text{RECOVERED})}{F_{\text{injected}}}$$
+

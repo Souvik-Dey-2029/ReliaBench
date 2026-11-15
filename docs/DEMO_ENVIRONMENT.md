@@ -57,3 +57,4 @@ The **Reliabench Demo Environment** delivers an out-of-the-box, zero-credential 
 - **Dashboard Clean State**: "Load Demo Workspace" button if the database is initially unpopulated.
 - **REST API**: `/api/v1/demo/status`, `/api/v1/demo/seed`, `/api/v1/demo/reset`.
 - **CLI**: `python -m app.cli seed-demo` and `python -m app.cli reset-demo`.
+

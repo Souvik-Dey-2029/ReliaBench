@@ -85,3 +85,4 @@ python -m app.cli clean-demo-data --dry-run
 # Purge demo synthetic data completely
 python -m app.cli clean-demo-data
 ```
+
